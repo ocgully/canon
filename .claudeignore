@@ -1,0 +1,13 @@
+# canon's runtime state. Users of Canon should not let agents browse
+# this directory -- the CLI is the interface.
+.canon/
+
+# Pedia owns .pedia/; enforce its read-through-CLI rule here too so a
+# project consuming Canon inherits the same discipline.
+.pedia/
+
+# Hopewell owns .hopewell/; same rule.
+.hopewell/
+
+# pedia:managed -- agents must query via the `pedia` CLI, never read .pedia/ directly
+.pedia/

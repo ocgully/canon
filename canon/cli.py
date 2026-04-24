@@ -1,0 +1,354 @@
+"""Canon CLI -- phase 1A surface.
+
+Subcommands:
+  init                          scaffold .canon/config.yaml; verify Pedia
+  new --north-star <slug>       interview + write .pedia/north-stars/<slug>.md
+  new --constitution <slug>     interview + write .pedia/constitution/<slug>.md
+  specify <slug>                interview + write .pedia/specs/<num>-<slug>/spec.md
+  plan <spec-id>                interview + write .pedia/specs/<spec-id>/plan.md
+  config {get|set|list}         read/write .canon/config.yaml
+"""
+from __future__ import annotations
+
+import argparse
+import os
+import re
+import sys
+from pathlib import Path
+from typing import List, Optional
+
+from canon import __version__
+from canon import config as config_mod
+from canon import pedia_bridge as pb
+from canon.interview import run_interview, MAX_ITER_DEFAULT
+from canon.render import render_block
+from canon.schemas.constitution import CONSTITUTION_SCHEMA
+from canon.schemas.north_star import NORTH_STAR_SCHEMA
+from canon.schemas.plan import PLAN_SCHEMA
+from canon.schemas.spec import SPEC_SCHEMA
+
+
+# ---------------------------------------------------------------------------
+# helpers
+# ---------------------------------------------------------------------------
+
+
+def _root(args) -> Path:
+    """Resolve the project root for a command invocation.
+
+    Default: walk up from CWD looking for .canon/. If none found, use
+    CWD (useful for `canon init`).
+    """
+    r = config_mod.find_root(Path.cwd())
+    return r or Path.cwd()
+
+
+def _slugify(s: str) -> str:
+    s = s.strip().lower()
+    s = re.sub(r"[^a-z0-9]+", "-", s)
+    return s.strip("-") or "untitled"
+
+
+def _write(msg: str) -> None:
+    sys.stdout.write(msg)
+    if not msg.endswith("\n"):
+        sys.stdout.write("\n")
+
+
+def _err(msg: str) -> int:
+    sys.stderr.write(msg)
+    if not msg.endswith("\n"):
+        sys.stderr.write("\n")
+    return 2
+
+
+# ---------------------------------------------------------------------------
+# init
+# ---------------------------------------------------------------------------
+
+
+def cmd_init(args) -> int:
+    root = Path.cwd()
+    canon_dir = root / ".canon"
+    if canon_dir.exists() and not args.force:
+        _write(f"Canon already initialized at {canon_dir}")
+    else:
+        canon_dir.mkdir(exist_ok=True)
+        cfg = config_mod.CanonConfig()
+        config_mod.save(root, cfg)
+        _write(f"Initialized Canon at {canon_dir}")
+
+    # Pedia check / bootstrap
+    ok, msg = pb.ensure_pedia_init(root)
+    if not ok and args.link_pedia:
+        _write(f"Pedia not present: {msg}")
+        _write("Bootstrapping .pedia/ ...")
+        ok_boot, boot_msg = pb.pedia_init_here(root)
+        if not ok_boot:
+            return _err(f"pedia bootstrap failed: {boot_msg}")
+        ok, msg = pb.ensure_pedia_init(root)
+    if not ok:
+        _write(
+            f"warning: {msg}\n"
+            "Canon will refuse to write blocks until Pedia is initialized.\n"
+            "Run `pedia init` in this directory (or re-run `canon init --link-pedia`)."
+        )
+    else:
+        _write(msg)
+
+    # Hopewell is optional in 1A.
+    if args.link_hopewell:
+        try:
+            import hopewell  # noqa: F401
+            _write(f"hopewell importable: {getattr(__import__('hopewell'), '__version__', 'unknown')}")
+        except Exception as e:
+            _write(f"warning: hopewell not importable ({e}); phase 1B needs it for task derivation.")
+
+    _write("")
+    _write("Next:")
+    _write("  canon new --north-star <slug>   # (optional) author a north-star")
+    _write("  canon specify <slug>            # author a spec (clarity-loop)")
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# new
+# ---------------------------------------------------------------------------
+
+
+def _interview_and_write(
+    *, root: Path, doc_type: str, slug: str, schema, filename: str,
+    agent_choice: str, dry_run: bool, max_iter: int,
+) -> int:
+    ok, msg = pb.ensure_pedia_init(root)
+    if not ok:
+        return _err(msg)
+
+    result = run_interview(schema, max_iter=max_iter)
+    body = render_block(doc_type, result, slug=slug)
+
+    if dry_run:
+        _write("--- DRY RUN: block would be written as: ---")
+        _write(body)
+        return 0
+
+    folder = pb.folder_for(doc_type, slug)
+    dst = pb.write_block(root, doc_type, folder, filename, body)
+    _write(f"\nWrote {dst.relative_to(root)}")
+
+    added, unchanged, removed = pb.refresh(root)
+    _write(f"pedia refresh: {added} added/updated, {unchanged} unchanged, {removed} removed")
+    return 0
+
+
+def cmd_new(args) -> int:
+    root = _root(args)
+    cfg = config_mod.load(root)
+    max_iter = cfg.clarity_max_iter
+    agent = args.agent or cfg.agent_default
+
+    if args.north_star:
+        slug = _slugify(args.north_star)
+        return _interview_and_write(
+            root=root, doc_type="north-star", slug=slug,
+            schema=NORTH_STAR_SCHEMA, filename=f"{slug}.md",
+            agent_choice=agent, dry_run=args.dry_run, max_iter=max_iter,
+        )
+    if args.constitution:
+        slug = _slugify(args.constitution)
+        return _interview_and_write(
+            root=root, doc_type="constitution", slug=slug,
+            schema=CONSTITUTION_SCHEMA, filename=f"{slug}.md",
+            agent_choice=agent, dry_run=args.dry_run, max_iter=max_iter,
+        )
+    return _err("specify one of --north-star <slug> or --constitution <slug>")
+
+
+# ---------------------------------------------------------------------------
+# specify
+# ---------------------------------------------------------------------------
+
+
+def cmd_specify(args) -> int:
+    root = _root(args)
+    cfg = config_mod.load(root)
+    max_iter = cfg.clarity_max_iter
+    agent = args.agent or cfg.agent_default
+
+    ok, msg = pb.ensure_pedia_init(root)
+    if not ok:
+        return _err(msg)
+
+    title_slug = _slugify(args.slug)
+    numbered = pb.next_spec_slug(root, title_slug)
+
+    # Seed north_star_citation from --from-north-star if provided.
+    context = {}
+    if args.from_north_star:
+        context["north_star_citation"] = args.from_north_star
+
+    _write(f"Canon: authoring spec `{numbered}`")
+    if args.from_north_star:
+        _write(f"seeding north-star citation: {args.from_north_star}")
+
+    # Patch schema answer default via a small wrapper -- we inject the
+    # pre-seeded value into the interview history before the prompts
+    # reach the user.
+    # Simplest: run the interview; if the user blanks north_star_citation
+    # and we have a seed, substitute post-hoc.
+    result = run_interview(SPEC_SCHEMA, max_iter=max_iter)
+    if args.from_north_star and not result.fields.get("north_star_citation", "").strip():
+        result.fields["north_star_citation"] = args.from_north_star
+        # The outcome stays -- not tampered with quality.
+
+    body = render_block("spec", result, slug=numbered)
+
+    if args.dry_run:
+        _write("--- DRY RUN: spec block would be written as: ---")
+        _write(body)
+        return 0
+
+    folder = pb.folder_for("spec", numbered)
+    dst = pb.write_block(root, "spec", folder, "spec.md", body)
+    _write(f"\nWrote {dst.relative_to(root)}")
+
+    added, unchanged, removed = pb.refresh(root)
+    _write(f"pedia refresh: {added} added/updated, {unchanged} unchanged, {removed} removed")
+    _write(f"\nNext: canon plan {numbered}")
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# plan
+# ---------------------------------------------------------------------------
+
+
+def cmd_plan(args) -> int:
+    root = _root(args)
+    cfg = config_mod.load(root)
+    max_iter = cfg.clarity_max_iter
+
+    ok, msg = pb.ensure_pedia_init(root)
+    if not ok:
+        return _err(msg)
+
+    spec_slug = args.spec_id
+    spec_path = root / ".pedia" / "specs" / spec_slug / "spec.md"
+    if not spec_path.exists():
+        # Allow user to pass a bare title-slug too.
+        candidates = sorted((root / ".pedia" / "specs").glob(f"*-{spec_slug}"))
+        if candidates:
+            spec_slug = candidates[-1].name
+            spec_path = root / ".pedia" / "specs" / spec_slug / "spec.md"
+    if not spec_path.exists():
+        return _err(f"no spec found at .pedia/specs/{args.spec_id}/spec.md")
+
+    _write(f"Canon: planning spec `{spec_slug}`")
+    _write(f"spec: {spec_path.relative_to(root)}")
+
+    result = run_interview(PLAN_SCHEMA, max_iter=max_iter)
+    body = render_block("plan", result, slug=spec_slug)
+
+    if args.dry_run:
+        _write("--- DRY RUN: plan block would be written as: ---")
+        _write(body)
+        return 0
+
+    folder = pb.folder_for("plan", spec_slug)
+    dst = pb.write_block(root, "plan", folder, "plan.md", body)
+    _write(f"\nWrote {dst.relative_to(root)}")
+
+    added, unchanged, removed = pb.refresh(root)
+    _write(f"pedia refresh: {added} added/updated, {unchanged} unchanged, {removed} removed")
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# config
+# ---------------------------------------------------------------------------
+
+
+def cmd_config(args) -> int:
+    root = _root(args)
+    if not (root / ".canon").is_dir():
+        return _err("not a canon project (no .canon/ here or above). run `canon init`.")
+    if args.action == "get":
+        if not args.key:
+            return _err("canon config get <key>")
+        v = config_mod.get_key(root, args.key)
+        if v is None:
+            return _err(f"unknown key: {args.key}")
+        _write(str(v))
+        return 0
+    if args.action == "set":
+        if not args.key or args.value is None:
+            return _err("canon config set <key> <value>")
+        config_mod.set_key(root, args.key, args.value)
+        _write(f"{args.key} = {args.value}")
+        return 0
+    if args.action == "list":
+        for line in config_mod.list_keys(root):
+            _write(line)
+        return 0
+    return _err(f"unknown config action: {args.action}")
+
+
+# ---------------------------------------------------------------------------
+# parser
+# ---------------------------------------------------------------------------
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="canon",
+        description="Canon -- SDD discipline tool. Buries SpecKit.",
+    )
+    p.add_argument("--version", action="version", version=f"canon {__version__}")
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    pi = sub.add_parser("init", help="Scaffold .canon/ in this directory")
+    pi.add_argument("--link-pedia", action="store_true",
+                    help="Also run `pedia init` if .pedia/ is missing")
+    pi.add_argument("--link-hopewell", action="store_true",
+                    help="Verify hopewell is importable (1B dep; optional in 1A)")
+    pi.add_argument("--force", action="store_true", help="Overwrite existing config")
+    pi.set_defaults(func=cmd_init)
+
+    pn = sub.add_parser("new", help="Author a north-star or constitution chapter")
+    group = pn.add_mutually_exclusive_group(required=True)
+    group.add_argument("--north-star", metavar="SLUG",
+                       help="Author a new north-star block")
+    group.add_argument("--constitution", metavar="CHAPTER_SLUG",
+                       help="Author a constitution chapter")
+    pn.add_argument("--agent", metavar="{claude|codex|none}", default=None,
+                    help="External agent runner (phase 1A: ignored unless PATH-available)")
+    pn.add_argument("--dry-run", action="store_true", help="Print the block; don't write")
+    pn.set_defaults(func=cmd_new)
+
+    ps = sub.add_parser("specify", help="Author a spec (clarity-loop interview)")
+    ps.add_argument("slug", help="Human-friendly title slug")
+    ps.add_argument("--from-north-star", metavar="NS_SLUG",
+                    help="Pre-seed the north-star citation")
+    ps.add_argument("--agent", metavar="{claude|codex|none}", default=None)
+    ps.add_argument("--dry-run", action="store_true")
+    ps.set_defaults(func=cmd_specify)
+
+    pp = sub.add_parser("plan", help="Author a plan for a spec")
+    pp.add_argument("spec_id", help="Spec slug (e.g. 001-cache-layer) or title-slug")
+    pp.add_argument("--agent", metavar="{claude|codex|none}", default=None)
+    pp.add_argument("--dry-run", action="store_true")
+    pp.set_defaults(func=cmd_plan)
+
+    pc = sub.add_parser("config", help="Read/write .canon/config.yaml")
+    pc.add_argument("action", choices=["get", "set", "list"])
+    pc.add_argument("key", nargs="?", default=None)
+    pc.add_argument("value", nargs="?", default=None)
+    pc.set_defaults(func=cmd_config)
+
+    return p
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+    return args.func(args)

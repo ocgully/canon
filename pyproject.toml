@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "canon"
+version = "0.1.0"
+description = "Canon -- SDD discipline tool. Clarity-loop interviewed, citation-anchored spec + plan authoring over Pedia + Hopewell. Buries SpecKit."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Christopher Gulliver", email = "ocgully@users.noreply.github.com" }]
+keywords = ["canon", "sdd", "spec-driven-development", "speckit", "clarity-loop", "llm", "agents", "pedia", "hopewell"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Documentation",
+  "Topic :: Utilities",
+]
+
+# Phase 1A: Pedia is the only runtime dep (writes blocks). Hopewell is
+# imported opportunistically in 1B when we derive tasks.
+dependencies = [
+  "pedia>=0.3",
+]
+
+[project.optional-dependencies]
+hopewell = [
+  "hopewell>=0.16",
+]
+dev = [
+  "pytest>=8",
+  "ruff>=0.4",
+]
+
+[project.urls]
+Homepage = "https://github.com/ocgully/canon"
+Repository = "https://github.com/ocgully/canon"
+Issues = "https://github.com/ocgully/canon/issues"
+
+[project.scripts]
+canon = "canon.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["canon*"]
+exclude = ["tests*", "docs*"]
