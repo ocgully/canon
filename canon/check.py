@@ -294,12 +294,15 @@ def _check_plan(spec_dir: Path, root: Path, report: CheckReport) -> Tuple[bool, 
 
 def _check_tasks(root: Path, report: CheckReport, *,
                  valid_spec_slugs: set, plan_steps: Dict[str, int]) -> Dict[str, int]:
-    """Walk Hopewell nodes; return {spec_slug: task_count}."""
+    """Walk TaskFlow / Hopewell nodes; return {spec_slug: task_count}."""
     counts: Dict[str, int] = {}
     try:
-        from hopewell import project as hw_project  # type: ignore
+        try:
+            from taskflow import project as hw_project  # type: ignore
+        except ImportError:
+            from hopewell import project as hw_project  # type: ignore  (legacy)
     except Exception:
-        # Hopewell missing -> no tasks to validate; not an error here.
+        # Neither installed -> no tasks to validate; not an error here.
         return counts
     try:
         project = hw_project.Project.load(start=root)

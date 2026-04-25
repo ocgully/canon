@@ -43,24 +43,31 @@ from canon.decompose.strategies import REGISTRY
 
 
 # ---------------------------------------------------------------------------
-# Hopewell loader (lazy)
+# TaskFlow / Hopewell loader (lazy)
 # ---------------------------------------------------------------------------
 
 
 def _load_hopewell():
+    """Try the new taskflow package; fall back to legacy hopewell."""
     try:
-        from hopewell import project as hw_project  # type: ignore
-        from hopewell.model import EdgeKind, NodeStatus  # type: ignore
+        try:
+            from taskflow import project as hw_project  # type: ignore
+            from taskflow.model import EdgeKind, NodeStatus  # type: ignore
+        except ImportError:
+            from hopewell import project as hw_project  # type: ignore  (legacy)
+            from hopewell.model import EdgeKind, NodeStatus  # type: ignore  (legacy)
         return hw_project, EdgeKind, NodeStatus
     except Exception as e:
         raise RuntimeError(
-            f"hopewell is not importable ({e}); install with "
-            "`pip install hopewell` to use `canon decompose` against a Hopewell project"
+            f"taskflow / hopewell is not importable ({e}); install with "
+            "`pip install taskflow` to use `canon decompose` against a "
+            "TaskFlow (formerly Hopewell) project"
         )
 
 
 def _hopewell_present(root: Path) -> bool:
-    return (root / ".hopewell").is_dir()
+    """Detect either the new `.taskflow/` or legacy `.hopewell/` storage dir."""
+    return (root / ".taskflow").is_dir() or (root / ".hopewell").is_dir()
 
 
 # ---------------------------------------------------------------------------

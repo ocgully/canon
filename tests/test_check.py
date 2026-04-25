@@ -21,7 +21,7 @@ pytestmark = pytest.mark.skipif(
 
 def test_check_clean_lineage(tmp_path: Path):
     build_lineage(tmp_path)
-    from hopewell import project as hw_project
+    from taskflow import project as hw_project
     project = hw_project.Project.load(start=tmp_path)
     plan = parse_plan(tmp_path / ".pedia" / "specs" / "001-cache-layer" / "plan.md")
     derive_tasks(project, plan)
@@ -47,7 +47,7 @@ def test_check_flags_missing_citations_and_orphan_plan(tmp_path: Path):
 
 def test_check_flags_broken_task_citation(tmp_path: Path):
     build_lineage(tmp_path)
-    from hopewell import project as hw_project
+    from taskflow import project as hw_project
     project = hw_project.Project.load(start=tmp_path)
     plan = parse_plan(tmp_path / ".pedia" / "specs" / "001-cache-layer" / "plan.md")
     derive_tasks(project, plan)

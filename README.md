@@ -6,10 +6,10 @@ Canon is the fifth sibling in the agent-infrastructure family:
 
 | Tool | Owns |
 |---|---|
-| [mercator](https://github.com/ocgully/mercator) | code structure (layered codemap) |
-| [hopewell](https://github.com/ocgully/Hopewell) | work ledger (typed node graph) |
+| [codeatlas](https://github.com/ocgully/mercator) (formerly mercator) | code structure (layered codemap) |
+| [taskflow](https://github.com/ocgully/Hopewell) (formerly hopewell) | work ledger (typed node graph) |
 | [pedia](https://github.com/ocgully/pedia) | knowledge / specs / context store |
-| [sextant](https://github.com/ocgully/sextant) | review / navigation surface |
+| [diffsextant](https://github.com/ocgully/sextant) (formerly sextant) | review / navigation surface |
 | **canon** | **authoring discipline -- spec, plan, task, implement, cite-everything** |
 
 ## Why bury SpecKit?
@@ -70,7 +70,7 @@ Strategy resolution chain (first match wins):
 1. CLI flag: `canon decompose --strategy flow`
 2. Plan front-matter: `strategy: flow`
 3. Repo config: `.canon/config.yaml` -> `decompose.strategy: flow`
-4. Smart fallback: if `.hopewell/` AND `.pedia/` are present in the repo
+4. Smart fallback: if `.taskflow/` (or legacy `.hopewell/`) AND `.pedia/` are present in the repo
    tree -> `flow`; else -> `tasks`.
 
 Use `canon amend plan <spec-id> --regenerate --strategy <name>` to swap

@@ -22,15 +22,15 @@ pytestmark = pytest.mark.skipif(
 
 def _bootstrap_default_network(tmp_path: Path):
     """Equivalent to `hopewell network defaults bootstrap`."""
-    from hopewell import network as hw_network
-    from hopewell import network_defaults as hw_defaults
+    from taskflow import network as hw_network
+    from taskflow import network_defaults as hw_defaults
     hw_network.ensure_network_dir(tmp_path)
     hw_defaults.write_default_template(tmp_path)
 
 
 def _make_project_with_tasks(tmp_path: Path):
     build_lineage(tmp_path)
-    from hopewell import project as hw_project
+    from taskflow import project as hw_project
     project = hw_project.Project.load(start=tmp_path)
     plan = parse_plan(tmp_path / ".pedia" / "specs" / "001-cache-layer" / "plan.md")
     derive_tasks(project, plan)
@@ -45,7 +45,7 @@ def test_has_orchestrator_false_without_network(tmp_path: Path):
 def test_has_orchestrator_true_after_default_template(tmp_path: Path):
     project = _make_project_with_tasks(tmp_path)
     _bootstrap_default_network(tmp_path)
-    from hopewell import project as hw_project
+    from taskflow import project as hw_project
     project2 = hw_project.Project.load(start=tmp_path)
     # Hopewell's default template includes @orchestrator.
     assert has_orchestrator(project2) is True
@@ -74,7 +74,7 @@ def test_assemble_bundle_writes_dispatch_file(tmp_path: Path):
 def test_direct_target_uses_executor_suggestion_when_present(tmp_path: Path):
     project = _make_project_with_tasks(tmp_path)
     _bootstrap_default_network(tmp_path)
-    from hopewell import project as hw_project
+    from taskflow import project as hw_project
     project = hw_project.Project.load(start=tmp_path)
 
     node = project.all_nodes()[0]
@@ -82,7 +82,7 @@ def test_direct_target_uses_executor_suggestion_when_present(tmp_path: Path):
     # it should win; else the first sorted executor is used.
     target = _direct_target(project, node)
     assert target is not None
-    from hopewell import network as hw_network
+    from taskflow import network as hw_network
     net = hw_network.load_network(tmp_path)
     if "agent" in net.executors:
         assert target == "agent"

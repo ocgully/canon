@@ -109,13 +109,20 @@ def cmd_init(args) -> int:
     else:
         _write(msg)
 
-    # Hopewell is optional in 1A.
+    # TaskFlow / Hopewell is optional in 1A.
     if args.link_hopewell:
         try:
-            import hopewell  # noqa: F401
-            _write(f"hopewell importable: {getattr(__import__('hopewell'), '__version__', 'unknown')}")
+            try:
+                import taskflow as _tf  # noqa: F401
+                ver = getattr(_tf, "__version__", "unknown")
+                _write(f"taskflow importable: {ver}")
+            except ImportError:
+                import hopewell as _hw  # noqa: F401  (legacy)
+                ver = getattr(_hw, "__version__", "unknown")
+                _write(f"hopewell (legacy) importable: {ver}")
         except Exception as e:
-            _write(f"warning: hopewell not importable ({e}); phase 1B needs it for task derivation.")
+            _write(f"warning: taskflow/hopewell not importable ({e}); "
+                   f"phase 1B needs it for task derivation.")
 
     _write("")
     _write("Next:")

@@ -81,15 +81,19 @@ def _from_config(root: Optional[Path]) -> Optional[str]:
 
 
 def _smart_fallback(cwd: Path) -> str:
-    """Walk up from `cwd` looking for `.hopewell/` AND `.pedia/`.
+    """Walk up from `cwd` looking for a TaskFlow / Hopewell store
+    AND `.pedia/`.
 
     Both must be present (and at the same root) for the `flow` smart
     default. We're conservative: if either is missing, we drop to
-    `tasks`.
+    `tasks`. The work-graph store may be `.taskflow/` (post-rebrand)
+    or the legacy `.hopewell/` — either counts.
     """
     cur = cwd.resolve()
     for p in [cur] + list(cur.parents):
-        if (p / ".hopewell").is_dir() and (p / ".pedia").is_dir():
+        has_workgraph = (p / ".taskflow").is_dir() or (p / ".hopewell").is_dir()
+        has_pedia = (p / ".pedia").is_dir()
+        if has_workgraph and has_pedia:
             return "flow"
     return "tasks"
 

@@ -29,6 +29,12 @@ def _has_pedia() -> bool:
 
 
 def _has_hopewell() -> bool:
+    """Either taskflow (post-rebrand) or legacy hopewell satisfies this."""
+    try:
+        import taskflow  # noqa: F401
+        return True
+    except Exception:
+        pass
     try:
         import hopewell  # noqa: F401
         return True
@@ -205,7 +211,10 @@ def build_lineage(tmp_path: Path) -> Path:
     refresh_mod.refresh(tmp_path, full=True, docs_glob=None,
                         only_changed_in_session=False)
 
-    from hopewell import project as hw_project
+    try:
+        from taskflow import project as hw_project
+    except ImportError:
+        from hopewell import project as hw_project  # legacy
     hw_project.Project.init(
         tmp_path, id_prefix="HW", name="canon-1b-test", auto_backfill=False,
     )
@@ -269,7 +278,10 @@ def build_broken_lineage(tmp_path: Path) -> Path:
     refresh_mod.refresh(tmp_path, full=True, docs_glob=None,
                         only_changed_in_session=False)
 
-    from hopewell import project as hw_project
+    try:
+        from taskflow import project as hw_project
+    except ImportError:
+        from hopewell import project as hw_project  # legacy
     hw_project.Project.init(
         tmp_path, id_prefix="HW", name="canon-1b-broken", auto_backfill=False,
     )

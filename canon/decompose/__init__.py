@@ -24,7 +24,8 @@ Strategy resolution chain (first match wins) -- see `resolver.py`:
     1. CLI flag:   canon decompose --strategy flow
     2. Front-matter: `strategy: flow` in the plan markdown
     3. Repo config: .canon/config.yaml -> decompose.strategy: flow
-    4. Smart fallback: if .hopewell/ AND .pedia/ exist -> flow; else tasks.
+    4. Smart fallback: if .taskflow/ (or legacy .hopewell/) AND .pedia/
+       exist -> flow; else tasks.
 
 Each strategy returns a list of typed work items + edges (the exact
 shape depends on the strategy; see `base.WorkItem`). The dispatch layer

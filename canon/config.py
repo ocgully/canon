@@ -60,8 +60,11 @@ class CanonConfig:
         c.agent_context_dir = str(agent.get("context_dir", c.agent_context_dir))
         pedia = d.get("pedia") or {}
         c.pedia_link = bool(pedia.get("link", c.pedia_link))
+        # Accept either `taskflow:` (preferred post-rebrand) or `hopewell:`
+        # (legacy) as the work-graph integration block.
+        taskflow = d.get("taskflow") or {}
         hopewell = d.get("hopewell") or {}
-        c.hopewell_link = bool(hopewell.get("link", c.hopewell_link))
+        c.hopewell_link = bool(taskflow.get("link", hopewell.get("link", c.hopewell_link)))
         decompose = d.get("decompose") or {}
         c.decompose_strategy = str(decompose.get("strategy", c.decompose_strategy))
         return c
@@ -195,6 +198,9 @@ DOTTED_ALIASES = {
     "agent.default": ("agent", "default"),
     "agent.context_dir": ("agent", "context_dir"),
     "pedia.link": ("pedia",),
+    # Both keys point at the same underlying flag so users can refer to
+    # the work-graph integration by either name during the transition.
+    "taskflow.link": ("hopewell",),
     "hopewell.link": ("hopewell",),
 }
 

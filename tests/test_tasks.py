@@ -61,7 +61,7 @@ def test_sizing_estimate_maps_sizes_to_hours():
 
 def test_derive_tasks_creates_nodes_with_spec_input(tmp_path: Path):
     build_lineage(tmp_path)
-    from hopewell import project as hw_project
+    from taskflow import project as hw_project
     project = hw_project.Project.load(start=tmp_path)
     plan = parse_plan(tmp_path / ".pedia" / "specs" / "001-cache-layer" / "plan.md")
 
@@ -91,7 +91,7 @@ def test_derive_tasks_creates_nodes_with_spec_input(tmp_path: Path):
 
 def test_derive_tasks_is_idempotent(tmp_path: Path):
     build_lineage(tmp_path)
-    from hopewell import project as hw_project
+    from taskflow import project as hw_project
     plan = parse_plan(tmp_path / ".pedia" / "specs" / "001-cache-layer" / "plan.md")
 
     project = hw_project.Project.load(start=tmp_path)
@@ -109,7 +109,7 @@ def test_derive_tasks_is_idempotent(tmp_path: Path):
 
 def test_dry_run_does_not_persist(tmp_path: Path):
     build_lineage(tmp_path)
-    from hopewell import project as hw_project
+    from taskflow import project as hw_project
     plan = parse_plan(tmp_path / ".pedia" / "specs" / "001-cache-layer" / "plan.md")
 
     project = hw_project.Project.load(start=tmp_path)

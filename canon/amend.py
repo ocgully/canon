@@ -537,21 +537,32 @@ def maybe_surface_drift(root: Path, doc_type: str, slug: str) -> Optional[str]:
     if doc_type not in {"spec", "plan"}:
         return None
     try:
-        proc = subprocess.run(
-            ["hopewell", "spec-ref", "drift", "--all"],
-            cwd=str(root),
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=30,
-        )
+        # Try the new CLI name first; fall back to the deprecation alias.
+        try:
+            proc = subprocess.run(
+                ["taskflow", "spec-ref", "drift", "--all"],
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=30,
+            )
+        except FileNotFoundError:
+            proc = subprocess.run(
+                ["hopewell", "spec-ref", "drift", "--all"],
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=30,
+            )
     except Exception:
         return None
     out = (proc.stdout or "").strip()
     err = (proc.stderr or "").strip()
     if not out and not err:
         return None
-    return f"hopewell spec-ref drift --all (exit={proc.returncode}):\n{out}\n{err}".rstrip()
+    return f"spec-ref drift --all (exit={proc.returncode}):\n{out}\n{err}".rstrip()
 
 
 # ---------------------------------------------------------------------------
@@ -595,12 +606,17 @@ def amend(
     canonical = _canonicalize_type(doc_type)
     if canonical == "task":
         # Phase 1B owns task derivation; we hand off when present.
+        # Post-rebrand the package is `taskflow`; pre-rebrand it was `hopewell`.
         try:
-            import hopewell  # noqa: F401
+            try:
+                import taskflow  # noqa: F401
+            except ImportError:
+                import hopewell  # noqa: F401
         except Exception:
             raise RuntimeError(
-                "canon amend task requires `hopewell` (phase 1B). "
-                "Install canon[hopewell] or run `canon amend spec|plan|ns|constitution` instead."
+                "canon amend task requires `taskflow` (formerly `hopewell`; "
+                "phase 1B). Install canon[taskflow] / canon[hopewell] or run "
+                "`canon amend spec|plan|ns|constitution` instead."
             )
         # Hopewell exists; we still don't own task amend authoring in 1C.
         raise NotImplementedError(
@@ -740,7 +756,7 @@ def amend_regenerate(
             f"no plan found for identifier {identifier!r} under {root / '.pedia'}"
         )
 
-    # Late imports keep amend.py loadable without hopewell installed.
+    # Late imports keep amend.py loadable without taskflow/hopewell installed.
     from canon.decompose.base import parse_plan
     from canon.decompose.dispatch import run_strategy
 

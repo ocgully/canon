@@ -190,15 +190,22 @@ def walk_hopewell(root: Path, task_id: str, direction: str,
     --up  : transitive blockers / requires (what this task depends on)
     --down: transitive blocks (what depends on this task)
 
-    Falls back gracefully -- if Hopewell isn't importable, returns [].
+    Falls back gracefully -- if neither taskflow nor hopewell is
+    importable, returns [].
     """
     try:
-        import hopewell  # noqa: F401
+        try:
+            import taskflow  # noqa: F401
+        except ImportError:
+            import hopewell  # noqa: F401  (legacy)
     except Exception:
         return []
-    # Try a public-ish API: hopewell.query.deps_transitive(...).
+    # Try a public-ish API: taskflow.query.deps_transitive(...).
     try:
-        from hopewell import query as hquery  # type: ignore
+        try:
+            from taskflow import query as hquery  # type: ignore
+        except ImportError:
+            from hopewell import query as hquery  # type: ignore  (legacy)
     except Exception:
         return []
     fn = getattr(hquery, "deps_transitive", None) or getattr(hquery, "deps", None)

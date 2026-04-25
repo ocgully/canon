@@ -238,7 +238,7 @@ def test_run_strategy_against_every_strategy(tmp_path: Path, strategy: str):
     # Every strategy creates AT LEAST one node.
     assert len(result.created) >= 1
     # The created nodes carry the right strategy marker.
-    from hopewell import project as hw_project
+    from taskflow import project as hw_project
     project = hw_project.Project.load(start=tmp_path)
     for nid in result.created:
         node = project.node(nid)
@@ -254,7 +254,7 @@ def test_dry_run_does_not_persist(tmp_path: Path):
     )
     assert all("dry-run" in s for s in result.created)
     # The Hopewell project should still be empty.
-    from hopewell import project as hw_project
+    from taskflow import project as hw_project
     project = hw_project.Project.load(start=tmp_path)
     assert project.all_nodes() == []
 

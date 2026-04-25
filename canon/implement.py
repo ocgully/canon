@@ -36,15 +36,21 @@ from canon import pedia_bridge as pb
 
 
 def _load_hopewell():
+    """Try the new taskflow package; fall back to legacy hopewell."""
     try:
-        from hopewell import project as hw_project  # type: ignore
-        from hopewell import flow as hw_flow        # type: ignore
-        from hopewell import network as hw_network  # type: ignore
+        try:
+            from taskflow import project as hw_project  # type: ignore
+            from taskflow import flow as hw_flow        # type: ignore
+            from taskflow import network as hw_network  # type: ignore
+        except ImportError:
+            from hopewell import project as hw_project  # type: ignore  (legacy)
+            from hopewell import flow as hw_flow        # type: ignore  (legacy)
+            from hopewell import network as hw_network  # type: ignore  (legacy)
         return hw_project, hw_flow, hw_network
     except Exception as e:
         raise RuntimeError(
-            f"hopewell is not importable ({e}); install with "
-            "`pip install hopewell` to use `canon implement`"
+            f"taskflow / hopewell is not importable ({e}); install with "
+            "`pip install taskflow` to use `canon implement`"
         )
 
 
