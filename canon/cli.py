@@ -1,4 +1,4 @@
-"""Canon CLI -- phase 1A surface.
+"""Canon CLI -- phase 1A + 1B surface.
 
 Subcommands:
   init                          scaffold .canon/config.yaml; verify Pedia
@@ -6,7 +6,14 @@ Subcommands:
   new --constitution <slug>     interview + write .pedia/constitution/<slug>.md
   specify <slug>                interview + write .pedia/specs/<num>-<slug>/spec.md
   plan <spec-id>                interview + write .pedia/specs/<spec-id>/plan.md
+  tasks <spec-id>               derive Hopewell nodes from the plan (1B)
+  implement <task-id>           dispatch the task via @orchestrator (1B)
+  check [--strict]              validate citation completeness (1B)
   config {get|set|list}         read/write .canon/config.yaml
+
+Phase 1B (`tasks`/`implement`/`check`) is implemented in
+`canon.tasks` / `canon.implement` / `canon.check`; this module just
+wires the argparse surface.
 """
 from __future__ import annotations
 
@@ -338,6 +345,29 @@ def _build_parser() -> argparse.ArgumentParser:
     pp.add_argument("--agent", metavar="{claude|codex|none}", default=None)
     pp.add_argument("--dry-run", action="store_true")
     pp.set_defaults(func=cmd_plan)
+
+    # ----- 1B: tasks / implement / check -----
+    from canon.tasks import cmd_tasks
+    from canon.implement import cmd_implement
+    from canon.check import cmd_check
+
+    pt = sub.add_parser("tasks", help="Derive Hopewell nodes from a plan's decomposition")
+    pt.add_argument("spec_id", help="Spec slug (e.g. 001-cache-layer)")
+    pt.add_argument("--dry-run", action="store_true",
+                    help="Parse the plan + show what would be created; write nothing")
+    pt.set_defaults(func=cmd_tasks)
+
+    pim = sub.add_parser("implement", help="Dispatch a task via @orchestrator (or directly)")
+    pim.add_argument("task_id", help="Hopewell node id (e.g. HW-0001)")
+    pim.add_argument("--dry-run", action="store_true",
+                     help="Build the bundle + show the target; do not push")
+    pim.set_defaults(func=cmd_implement)
+
+    pck = sub.add_parser("check", help="Validate citation completeness across spec/plan/task")
+    pck.add_argument("--strict", action="store_true",
+                     help="Exit 2 on warnings (default: warnings are advisory)")
+    pck.add_argument("--format", choices=["text", "json"], default="text")
+    pck.set_defaults(func=cmd_check)
 
     pc = sub.add_parser("config", help="Read/write .canon/config.yaml")
     pc.add_argument("action", choices=["get", "set", "list"])

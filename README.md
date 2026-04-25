@@ -36,14 +36,25 @@ Canon replaces SpecKit's slash-command surface with a **disciplined, citation-an
 - The clarity-loop evaluator (rules-first; regex heuristics for specificity, testability, completeness, consistency, scope, goal-coverage)
 - Offline-capable: stdin-only by default; agent-runner integration (`--agent claude` etc.) is a subprocess hand-off, never an embedded chat client
 
-**Deferred** (phase 1B+): `canon tasks`, `canon implement`, `canon check`, `canon amend`, `canon trace`, `canon graph`, VS Code extension.
+## What phase 1B adds
+
+- `canon tasks <spec-id>` -- generates Hopewell nodes from a plan's
+  `## Decomposition` block; auto-populates each task's `spec-input`
+  citations + sizing metadata + executor suggestion. Idempotent.
+- `canon implement <task-id>` -- assembles a context bundle (cited spec
+  slices + universal-context blocks + Mercator dump if present) and
+  pushes the task via `flow.push`. Targets `@orchestrator` when the
+  flow network declares one; otherwise falls back to a direct dispatch
+  to the task's suggested executor.
+- `canon check [--strict] [--format=json]` -- citation completeness
+  validator. Errors block (exit 1); warnings advisory (exit 2 only
+  under `--strict`). Catches missing citations, orphan tasks/plans,
+  broken `spec-input` paths, and step-index drift.
 
 ## Install
 
 ```bash
-pip install pedia canon        # pedia is a runtime dep
-# optional, for phase-1B task derivation:
-pip install 'canon[hopewell]'
+pip install pedia hopewell canon
 ```
 
 ## Quick start
@@ -64,6 +75,18 @@ canon specify cache-layer --from-north-star agent-first-tooling
 
 # author its plan
 canon plan 001-cache-layer
+
+# derive Hopewell nodes from the plan (phase 1B)
+canon tasks 001-cache-layer
+hopewell list                    # the new nodes show up here
+
+# verify the citation chain
+canon check                      # exit 0 if clean
+canon check --strict             # exit 2 on warnings too
+
+# dispatch a task (routes via @orchestrator if network has one)
+canon implement HW-0001
+hopewell flow where HW-0001      # see where it landed
 
 # refresh + verify with Pedia
 pedia refresh
@@ -111,7 +134,11 @@ If the binary isn't on PATH, Canon tells you where the context file was written 
 
 ## Storage
 
-Canon stores nothing of its own beyond `.canon/config.yaml`. Every authored artifact is a Pedia block. Phase 1B adds Hopewell nodes for tasks.
+Canon stores nothing of its own beyond `.canon/config.yaml` and
+dispatch bundles under `.canon/dispatches/<HW-id>.md` (one per
+`canon implement` invocation). Every authored artifact is a Pedia
+block; every task is a Hopewell node with `component_data["spec-input"]`
+populated by `canon tasks`.
 
 ## Development
 
