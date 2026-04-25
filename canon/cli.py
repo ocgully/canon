@@ -1,4 +1,4 @@
-"""Canon CLI -- phase 1A + 1B surface.
+"""Canon CLI -- phase 1A + 1B + 1C surface.
 
 Subcommands:
   init                          scaffold .canon/config.yaml; verify Pedia
@@ -9,11 +9,15 @@ Subcommands:
   tasks <spec-id>               derive Hopewell nodes from the plan (1B)
   implement <task-id>           dispatch the task via @orchestrator (1B)
   check [--strict]              validate citation completeness (1B)
+  amend <type> <id>             incremental clarity-loop amend; supersedes prior block (1C)
+  trace <id> --up | --down      walk the citation graph (1C)
+  graph [--for <id>]            emit a Mermaid diagram of the citation graph (1C)
   config {get|set|list}         read/write .canon/config.yaml
 
 Phase 1B (`tasks`/`implement`/`check`) is implemented in
-`canon.tasks` / `canon.implement` / `canon.check`; this module just
-wires the argparse surface.
+`canon.tasks` / `canon.implement` / `canon.check`; phase 1C
+(`amend`/`trace`/`graph`) lives in `canon.amend` / `canon.trace` /
+`canon.graph`. This module just wires the argparse surface.
 """
 from __future__ import annotations
 
@@ -271,6 +275,88 @@ def cmd_plan(args) -> int:
 
 
 # ---------------------------------------------------------------------------
+# amend / trace / graph (phase 1C)
+# ---------------------------------------------------------------------------
+
+
+def cmd_amend(args) -> int:
+    from canon import amend as amend_mod
+
+    root = _root(args)
+    cfg = config_mod.load(root)
+    max_iter = cfg.clarity_max_iter
+
+    ok, msg = pb.ensure_pedia_init(root)
+    if not ok:
+        return _err(msg)
+
+    try:
+        result = amend_mod.amend(
+            root,
+            args.doc_type,
+            args.id,
+            max_iter=max_iter,
+            dry_run=args.dry_run,
+        )
+    except FileNotFoundError as e:
+        return _err(str(e))
+    except (ValueError, NotImplementedError, RuntimeError) as e:
+        return _err(str(e))
+
+    if result.get("dry_run"):
+        _write("--- DRY RUN: amended block would be written as: ---")
+        _write(result["new_body"])
+        return 0
+
+    _write(f"\nAmended {result['doc_type']} `{result['slug']}`")
+    _write(f"  prior block id: {result.get('prior_block_id') or '(unknown)'}")
+    _write(f"  new   block id: {result.get('new_block_id') or '(unknown)'}")
+    _write(f"  written:        {result['new_path']}")
+    _write(f"  history file:   {result['history_path']}")
+    if result.get("edge_written"):
+        _write("  pedia refs: supersedes edge written")
+    if result.get("drift"):
+        _write("")
+        _write("hopewell drift surfaced:")
+        for ln in result["drift"].splitlines():
+            _write(f"  {ln}")
+    return 0
+
+
+def cmd_trace(args) -> int:
+    from canon import trace as trace_mod
+
+    root = _root(args)
+    if not args.up and not args.down:
+        return _err("specify --up or --down")
+    if args.up and args.down:
+        return _err("use --up OR --down, not both")
+    direction = "up" if args.up else "down"
+
+    tr = trace_mod.run_trace(root, args.id, direction=direction, depth=args.depth)
+    out = trace_mod.format_result(tr, args.format)
+    if args.out:
+        Path(args.out).write_text(out, encoding="utf-8")
+        _write(f"wrote {args.out}")
+        return 0
+    _write(out)
+    return 0
+
+
+def cmd_graph(args) -> int:
+    from canon import graph as graph_mod
+
+    root = _root(args)
+    out = graph_mod.render_graph(root, focus=args.for_id, depth=args.depth)
+    if args.out:
+        Path(args.out).write_text(out, encoding="utf-8")
+        _write(f"wrote {args.out}")
+        return 0
+    _write(out)
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # config
 # ---------------------------------------------------------------------------
 
@@ -368,6 +454,52 @@ def _build_parser() -> argparse.ArgumentParser:
                      help="Exit 2 on warnings (default: warnings are advisory)")
     pck.add_argument("--format", choices=["text", "json"], default="text")
     pck.set_defaults(func=cmd_check)
+
+    # ----- 1C: amend / trace / graph -----
+    pa = sub.add_parser(
+        "amend",
+        help="Incremental clarity-loop amend; supersedes prior block",
+    )
+    pa.add_argument(
+        "doc_type",
+        choices=["spec", "plan", "ns", "north-star", "constitution", "task"],
+        help="Type of block to amend",
+    )
+    pa.add_argument("id", help="Slug or block-id of the prior block")
+    pa.add_argument("--dry-run", action="store_true",
+                    help="Show what would be written; mutate nothing")
+    pa.set_defaults(func=cmd_amend)
+
+    ptr = sub.add_parser(
+        "trace",
+        help="Walk the citation graph upstream or downstream from a block / task",
+    )
+    ptr.add_argument("id", help="Pedia block-id, spec slug, or Hopewell task id")
+    dir_grp = ptr.add_mutually_exclusive_group()
+    dir_grp.add_argument("--up", action="store_true",
+                         help="Walk upstream citations (this -> what it cites)")
+    dir_grp.add_argument("--down", action="store_true",
+                         help="Walk downstream consumers (what cites this)")
+    ptr.add_argument("--depth", type=int, default=5,
+                     help="Maximum recursion depth (default 5)")
+    ptr.add_argument("--format", choices=["text", "json", "mermaid"],
+                     default="text",
+                     help="Output format (default text)")
+    ptr.add_argument("--out", metavar="PATH",
+                     help="Write output to a file instead of stdout")
+    ptr.set_defaults(func=cmd_trace)
+
+    pg = sub.add_parser(
+        "graph",
+        help="Emit a Mermaid diagram of the citation graph",
+    )
+    pg.add_argument("--for", dest="for_id", metavar="ID",
+                    help="Scope to the depth-N neighborhood of this block / slug")
+    pg.add_argument("--depth", type=int, default=3,
+                    help="Neighborhood depth when --for is given (default 3)")
+    pg.add_argument("--out", metavar="PATH",
+                    help="Write diagram to a file instead of stdout")
+    pg.set_defaults(func=cmd_graph)
 
     pc = sub.add_parser("config", help="Read/write .canon/config.yaml")
     pc.add_argument("action", choices=["get", "set", "list"])

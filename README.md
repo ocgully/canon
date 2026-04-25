@@ -51,6 +51,57 @@ Canon replaces SpecKit's slash-command surface with a **disciplined, citation-an
   under `--strict`). Catches missing citations, orphan tasks/plans,
   broken `spec-input` paths, and step-index drift.
 
+## What phase 1C adds -- provenance + history
+
+- `canon amend <type> <id>` -- runs an INCREMENTAL clarity-loop
+  interview against an existing block, pre-seeded with each field's
+  current value. The user `<enter>`s to keep a value verbatim, types
+  delta to augment, or `accept` to commit a partial. Writes a NEW
+  block with `supersedes:` front-matter pointing at the prior
+  block-id; the old block stays queryable but is flagged
+  `superseded_by:`. The full prior text is stashed in a sidecar
+  `.amended-history` file so forensic review never loses the original
+  wording. Pedia's `refs` table gets an explicit `supersedes` edge so
+  `canon trace` + `canon graph` render the supersession. When a spec
+  or plan is amended and Hopewell is present, Canon runs `hopewell
+  spec-ref drift --all` and surfaces the output -- per HW-0034.
+
+  ```bash
+  canon amend spec 001-cache-layer
+  canon amend plan 001-cache-layer
+  canon amend ns agent-first-tooling          # 'ns' aliases 'north-star'
+  canon amend constitution technical
+  canon amend spec 001-cache-layer --dry-run  # preview without writing
+  ```
+
+- `canon trace <id> --up | --down [--depth N] [--format text|json|mermaid]`
+  -- walks the citation graph. `--up` follows what `<id>` cites
+  (transitively); `--down` follows what cites `<id>`. Resolves the
+  identifier as a Pedia block-id, a spec slug, a north-star slug, or
+  a Hopewell task-id. Pedia walks via `pedia.trace.walk`; Hopewell
+  task walks compose a node-edge BFS with the cited plan-block walk.
+  Leaves (no further edges in the requested direction) get a `[leaf]`
+  marker so orphan / uncited entities are obvious.
+
+  ```bash
+  canon trace 001-cache-layer --up
+  canon trace agent-first-tooling --down --format mermaid
+  canon trace HW-0001 --depth 2 --format json
+  ```
+
+- `canon graph [--for <id>] [--depth N] [--out PATH]` -- emits a
+  Mermaid diagram of the project's citation graph. Node colors track
+  doc-type (north-star, constitution, spec, plan, decision, task);
+  edge styles distinguish `cites` (solid arrow), `supersedes` (dotted
+  arrow), `requires` / `blocks` (Hopewell overlay). `--for <id>`
+  scopes to the depth-N neighborhood of that block. Renders natively
+  in GitHub, VS Code, and Obsidian.
+
+  ```bash
+  canon graph                                       # full project
+  canon graph --for spec/001-cache-layer --depth 3 --out graph.mmd
+  ```
+
 ## Install
 
 ```bash
