@@ -1,32 +1,31 @@
 ---
-description: Derive Hopewell tasks from a Canon plan's decomposition sketch (each task gets spec-input citations)
+description: "[DEPRECATED] Alias for /canon-decompose --strategy tasks. Use /canon-decompose instead."
 argument-hint: <spec-id>
 ---
 
-The user wants to derive Hopewell tasks from a finalized Canon plan.
+The user invoked the legacy slash command. `canon tasks` was renamed to
+`canon decompose` in 0.5.0; the original behavior is now one of five
+selectable strategies. This alias preserves prior behavior verbatim and
+will be removed in a future major release.
 
 Run:
 
 ```bash
-canon tasks $ARGUMENTS
+canon decompose $ARGUMENTS --strategy tasks
 ```
 
 What this does:
 
-1. Loads `.pedia/specs/<spec-id>/plan.md` and parses its decomposition sketch.
-2. For each bullet, creates a Hopewell node with:
-   - `hopewell new --components work-item --title "<plan bullet>"`
-   - `spec-input` component_data auto-populated:
-     - `specs[0].path = specs/<spec-id>/spec.md` + extracted block slices the task derives from
-     - `specs[1].path = specs/<spec-id>/plan.md` + the proposing plan block
-3. Adds Hopewell `blocks` edges matching the plan's order/parallelism hints.
-4. The narrow interview at this phase asks for: task sizing (XS/S/M/L), suggested executor component, and any spec-slice citations the heuristic couldn't determine.
+1. Loads `.pedia/specs/<spec-id>/plan.md` and parses its decomposition.
+2. Forces the `tasks` strategy (linear ordered work items with deps),
+   skipping the resolver chain.
+3. Materializes each work item as a Hopewell node with `spec-input`,
+   `executor-suggestion`, `sizing`, and a `canon` marker.
+
+Prefer `/canon-decompose <spec-id> [--strategy <name>]` going forward.
+See `/canon-decompose` for the full strategy catalog.
 
 Requires:
 
-- The `canon[hopewell]` extra installed (`pip install 'canon[hopewell]'`).
+- `pip install canon`.
 - `.hopewell/` initialized in the project.
-
-After this step, the user can run `hopewell ready` (NOT `ls .hopewell/`) to see what's available to pick up, or `/canon-implement <task-id>` to dispatch via the orchestrator.
-
-Tasks without spec-input citations are blocked — Canon refuses to create orphan tickets.

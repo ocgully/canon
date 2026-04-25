@@ -27,7 +27,8 @@ VSCODE_DIR = PLUGIN_ROOT / "vscode"
 EXPECTED_COMMANDS = {
     "canon-specify",
     "canon-plan",
-    "canon-tasks",
+    "canon-decompose",
+    "canon-tasks",   # deprecated alias retained until next major
     "canon-trace",
     "canon-graph",
 }
@@ -111,7 +112,8 @@ def test_vscode_package_json_valid():
     pkg = json.loads(pkg_path.read_text(encoding="utf-8"))
 
     assert pkg["name"] == "canon-vscode"
-    assert pkg["version"] == "0.1.0"
+    # 0.1.0 was the original 1D surface; 0.2.0 adds Canon: Decompose Plan.
+    assert pkg["version"] in {"0.1.0", "0.2.0"}
     assert "main" in pkg
     assert (VSCODE_DIR / pkg["main"]).is_file(), (
         f"main entry {pkg['main']} missing on disk"
@@ -124,7 +126,14 @@ def test_vscode_package_json_valid():
     # a registerCommand call in extension.js.
     contributed = pkg.get("contributes", {}).get("commands", [])
     contributed_ids = {c["command"] for c in contributed}
-    expected = {"canon.specify", "canon.plan", "canon.tasks", "canon.check", "canon.trace"}
+    expected = {
+        "canon.specify",
+        "canon.plan",
+        "canon.decompose",
+        "canon.tasks",
+        "canon.check",
+        "canon.trace",
+    }
     assert contributed_ids == expected, (
         f"contributed command set drift: {contributed_ids ^ expected}"
     )
@@ -138,7 +147,14 @@ def test_vscode_package_json_valid():
 
 def test_vscode_extension_js_registers_all_commands():
     ext = (VSCODE_DIR / "extension.js").read_text(encoding="utf-8")
-    for cmd in ("canon.specify", "canon.plan", "canon.tasks", "canon.check", "canon.trace"):
+    for cmd in (
+        "canon.specify",
+        "canon.plan",
+        "canon.decompose",
+        "canon.tasks",
+        "canon.check",
+        "canon.trace",
+    ):
         assert f"'{cmd}'" in ext, f"extension.js does not register {cmd}"
 
 

@@ -87,9 +87,34 @@ async function cmdPlan() {
   runInTerminal('plan', [specId]);
 }
 
-async function cmdTasks() {
+async function cmdDecompose() {
   const specId = await vscode.window.showInputBox({
-    prompt: 'Spec id to derive Hopewell tasks from',
+    prompt: 'Spec id to decompose into Hopewell work items',
+    placeHolder: 'NNN-slug',
+  });
+  if (!specId) return;
+  const strategy = await vscode.window.showQuickPick(
+    [
+      { label: 'auto (resolver chain)', value: '' },
+      { label: 'tasks (linear list)', value: 'tasks' },
+      { label: 'flow (Hopewell waves)', value: 'flow' },
+      { label: 'vertical-slice (demo-able increments)', value: 'vertical-slice' },
+      { label: 'spike-build (research first)', value: 'spike-build' },
+      { label: 'story-map (epic / activity / story)', value: 'story-map' },
+    ],
+    { placeHolder: 'Strategy' },
+  );
+  if (!strategy) return;
+  const args = [specId];
+  if (strategy.value) args.push('--strategy', strategy.value);
+  runInTerminal('decompose', args);
+}
+
+async function cmdTasks() {
+  // Deprecated alias kept for users with muscle memory; forwards to the
+  // CLI's `tasks` subcommand which itself prints a deprecation warning.
+  const specId = await vscode.window.showInputBox({
+    prompt: '[deprecated] Spec id to derive tasks from -- consider Canon: Decompose Plan instead',
     placeHolder: 'NNN-slug',
   });
   if (!specId) return;
@@ -152,6 +177,7 @@ function activate(context) {
   context.subscriptions.push(
     vscode.commands.registerCommand('canon.specify', cmdSpecify),
     vscode.commands.registerCommand('canon.plan', cmdPlan),
+    vscode.commands.registerCommand('canon.decompose', cmdDecompose),
     vscode.commands.registerCommand('canon.tasks', cmdTasks),
     vscode.commands.registerCommand('canon.check', cmdCheck),
     vscode.commands.registerCommand('canon.trace', cmdTrace),

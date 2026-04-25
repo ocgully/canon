@@ -29,6 +29,11 @@ DEFAULTS: Dict[str, Any] = {
     "hopewell": {
         "link": False,
     },
+    "decompose": {
+        # Default strategy when no CLI flag, no front-matter, no smart-detect
+        # match. Empty string means "fall through to smart-default".
+        "strategy": "",
+    },
 }
 
 
@@ -41,6 +46,7 @@ class CanonConfig:
     agent_context_dir: str = ".canon/interview-context"
     pedia_link: bool = True
     hopewell_link: bool = False
+    decompose_strategy: str = ""    # 0.5.0: empty -> smart-default
 
     @classmethod
     def from_dict(cls, d: Dict[str, Any]) -> "CanonConfig":
@@ -56,6 +62,8 @@ class CanonConfig:
         c.pedia_link = bool(pedia.get("link", c.pedia_link))
         hopewell = d.get("hopewell") or {}
         c.hopewell_link = bool(hopewell.get("link", c.hopewell_link))
+        decompose = d.get("decompose") or {}
+        c.decompose_strategy = str(decompose.get("strategy", c.decompose_strategy))
         return c
 
     def to_dict(self) -> Dict[str, Any]:
@@ -71,6 +79,7 @@ class CanonConfig:
             },
             "pedia": {"link": self.pedia_link},
             "hopewell": {"link": self.hopewell_link},
+            "decompose": {"strategy": self.decompose_strategy},
         }
 
 

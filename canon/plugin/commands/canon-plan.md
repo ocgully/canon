@@ -22,6 +22,6 @@ Notes:
 
 - `<spec-id>` looks like `001-cache-layer` — the directory name under `.pedia/specs/`.
 - The clarity-loop's `goal_coverage` dimension fires if the approach doesn't address every goal in the spec; expect targeted follow-ups.
-- After completion, the natural next step is `/canon-tasks <spec-id>` (phase 1B) to derive Hopewell nodes from the decomposition sketch.
+- After completion, the natural next step is `/canon-decompose <spec-id> [--strategy <name>]` to break the plan into work items. Pick a strategy that matches your shape (tasks / flow / vertical-slice / spike-build / story-map); the default is smart-detected from `.hopewell/` + `.pedia/` presence.
 
 Cite-everything is enforced — a plan without a spec citation is blocked.

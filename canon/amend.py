@@ -568,6 +568,8 @@ def amend(
     dry_run: bool = False,
     overrides: Optional[Dict[str, str]] = None,
     say=None,
+    regenerate: bool = False,
+    strategy: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Amend an existing block.
 
@@ -577,7 +579,19 @@ def amend(
     `overrides` lets tests inject answers without touching stdin: each
     listed field is treated as the new value; absent fields keep their
     prior value.
+
+    `regenerate=True` (only valid with doc_type in {plan}) re-runs the
+    decompose strategy in place, swapping out work items for the new
+    strategy. Plain `amend` (regenerate=False) preserves the existing
+    strategy and only patches text. Pass `strategy="..."` to choose the
+    new strategy explicitly; otherwise the resolver's chain runs.
     """
+    if regenerate:
+        return amend_regenerate(
+            root, doc_type, identifier,
+            strategy=strategy, dry_run=dry_run,
+        )
+
     canonical = _canonicalize_type(doc_type)
     if canonical == "task":
         # Phase 1B owns task derivation; we hand off when present.
@@ -682,4 +696,69 @@ def amend(
         "history_path": str(history_path),
         "edge_written": edge_written,
         "drift": drift,
+    }
+
+
+# ---------------------------------------------------------------------------
+# `--regenerate --strategy <name>` -- swap a plan's work items in place
+# ---------------------------------------------------------------------------
+
+
+def amend_regenerate(
+    root: Path,
+    doc_type: str,
+    identifier: str,
+    *,
+    strategy: Optional[str] = None,
+    dry_run: bool = False,
+) -> Dict[str, Any]:
+    """Re-run the decompose strategy for an existing plan.
+
+    Only `doc_type == "plan"` is supported (regenerating a spec or
+    constitution doesn't have well-defined semantics yet -- those are
+    text-only artifacts). The plan markdown is NOT rewritten; we just
+    re-derive the work items under the new strategy. Existing
+    canon-marked work items for OTHER strategies are left in place
+    (their (slug, strategy, index) keys differ); items for THIS
+    strategy that already exist are skipped via the dispatch layer's
+    idempotency.
+
+    Returns a dict suitable for the CLI to print (the
+    `DecomposeResult` is included under `result`).
+    """
+    canonical = _canonicalize_type(doc_type)
+    if canonical != "plan":
+        raise ValueError(
+            f"--regenerate is only supported for `plan` (got {doc_type!r}); "
+            "specs / north-stars / constitution chapters are text-only artifacts. "
+            "Use plain `canon amend` for those."
+        )
+    # Locate the plan.
+    plan_path = _resolve_prior_path(root, "plan", identifier)
+    if plan_path is None:
+        raise FileNotFoundError(
+            f"no plan found for identifier {identifier!r} under {root / '.pedia'}"
+        )
+
+    # Late imports keep amend.py loadable without hopewell installed.
+    from canon.decompose.base import parse_plan
+    from canon.decompose.dispatch import run_strategy
+
+    plan = parse_plan(plan_path)
+    if not plan.decomposition:
+        raise ValueError(
+            f"plan {plan_path} has no decomposition steps; nothing to regenerate."
+        )
+
+    result, resolved_strategy, source = run_strategy(
+        root=root, plan=plan, cli_strategy=strategy, dry_run=dry_run,
+    )
+    return {
+        "dry_run": dry_run,
+        "doc_type": "plan",
+        "slug": plan.spec_slug,
+        "regenerated": True,
+        "strategy": resolved_strategy,
+        "strategy_source": source,
+        "result": result,
     }

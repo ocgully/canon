@@ -2,7 +2,7 @@
   "name": "canon-vscode",
   "displayName": "Canon",
   "description": "VS Code surface for Canon — the SDD discipline tool. Buries SpecKit. Phase 1D.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "ocgully",
   "license": "Apache-2.0",
   "engines": {
@@ -28,6 +28,7 @@
   "activationEvents": [
     "onCommand:canon.specify",
     "onCommand:canon.plan",
+    "onCommand:canon.decompose",
     "onCommand:canon.tasks",
     "onCommand:canon.check",
     "onCommand:canon.trace"
@@ -45,8 +46,13 @@
         "category": "Canon"
       },
       {
+        "command": "canon.decompose",
+        "title": "Canon: Decompose Plan into Work Items",
+        "category": "Canon"
+      },
+      {
         "command": "canon.tasks",
-        "title": "Canon: Derive Tasks",
+        "title": "Canon: Derive Tasks (deprecated alias)",
         "category": "Canon"
       },
       {

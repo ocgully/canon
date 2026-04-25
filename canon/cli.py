@@ -1,4 +1,4 @@
-"""Canon CLI -- phase 1A + 1B + 1C surface.
+"""Canon CLI -- phase 1A + 1B + 1C + 1E surface.
 
 Subcommands:
   init                          scaffold .canon/config.yaml; verify Pedia
@@ -6,7 +6,8 @@ Subcommands:
   new --constitution <slug>     interview + write .pedia/constitution/<slug>.md
   specify <slug>                interview + write .pedia/specs/<num>-<slug>/spec.md
   plan <spec-id>                interview + write .pedia/specs/<spec-id>/plan.md
-  tasks <spec-id>               derive Hopewell nodes from the plan (1B)
+  decompose <spec-id>           break a plan into work items via a selectable strategy (0.5)
+  tasks <spec-id>               [DEPRECATED] alias for `decompose --strategy tasks`
   implement <task-id>           dispatch the task via @orchestrator (1B)
   check [--strict]              validate citation completeness (1B)
   amend <type> <id>             incremental clarity-loop amend; supersedes prior block (1C)
@@ -14,10 +15,11 @@ Subcommands:
   graph [--for <id>]            emit a Mermaid diagram of the citation graph (1C)
   config {get|set|list}         read/write .canon/config.yaml
 
-Phase 1B (`tasks`/`implement`/`check`) is implemented in
-`canon.tasks` / `canon.implement` / `canon.check`; phase 1C
-(`amend`/`trace`/`graph`) lives in `canon.amend` / `canon.trace` /
-`canon.graph`. This module just wires the argparse surface.
+Phase 1B was originally `canon tasks`; HW-0065 (0.5.0) renamed it to
+`canon decompose` and expanded the single-strategy behavior into five
+selectable strategies (tasks / flow / vertical-slice / spike-build /
+story-map) -- see `canon.decompose`. The old `canon tasks` survives as
+a deprecation shim.
 """
 from __future__ import annotations
 
@@ -290,6 +292,15 @@ def cmd_amend(args) -> int:
     if not ok:
         return _err(msg)
 
+    regenerate = bool(getattr(args, "regenerate", False))
+    strategy = getattr(args, "strategy", None)
+    if strategy and not regenerate:
+        return _err(
+            "--strategy requires --regenerate (plain `canon amend` does not "
+            "regenerate work items; use `canon amend plan <id> --regenerate "
+            "--strategy <name>`)"
+        )
+
     try:
         result = amend_mod.amend(
             root,
@@ -297,11 +308,37 @@ def cmd_amend(args) -> int:
             args.id,
             max_iter=max_iter,
             dry_run=args.dry_run,
+            regenerate=regenerate,
+            strategy=strategy,
         )
     except FileNotFoundError as e:
         return _err(str(e))
     except (ValueError, NotImplementedError, RuntimeError) as e:
         return _err(str(e))
+
+    # --regenerate result has a different shape.
+    if result.get("regenerated"):
+        dec = result["result"]
+        _write(
+            f"\nRegenerated plan `{result['slug']}` "
+            f"under strategy={result['strategy']} [from {result['strategy_source']}]"
+        )
+        _write(f"  created work items : {len(dec.created)}")
+        for nid in dec.created:
+            _write(f"    + {nid}")
+        if dec.skipped:
+            _write(f"  skipped (existed)  : {len(dec.skipped)}")
+            for nid in dec.skipped:
+                _write(f"    = {nid}")
+        if dec.edges:
+            _write(f"  ordering edges     : {len(dec.edges)}")
+            for (a, b) in dec.edges:
+                _write(f"    {a} blocks {b}")
+        if dec.open_questions:
+            _write(f"  open-question items: {len(dec.open_questions)}")
+            for nid in dec.open_questions:
+                _write(f"    ? {nid}")
+        return 0
 
     if result.get("dry_run"):
         _write("--- DRY RUN: amended block would be written as: ---")
@@ -432,16 +469,51 @@ def _build_parser() -> argparse.ArgumentParser:
     pp.add_argument("--dry-run", action="store_true")
     pp.set_defaults(func=cmd_plan)
 
-    # ----- 1B: tasks / implement / check -----
-    from canon.tasks import cmd_tasks
+    # ----- 1B: decompose (renamed from `tasks` in 0.5.0) / implement / check -----
+    from canon.decompose import cmd_decompose, cmd_tasks_alias
+    from canon.decompose.resolver import KNOWN_STRATEGIES
     from canon.implement import cmd_implement
     from canon.check import cmd_check
 
-    pt = sub.add_parser("tasks", help="Derive Hopewell nodes from a plan's decomposition")
+    pd = sub.add_parser(
+        "decompose",
+        help="Decompose a plan into work items via a selectable strategy",
+    )
+    pd.add_argument("spec_id", help="Spec slug (e.g. 001-cache-layer)")
+    pd.add_argument(
+        "--strategy",
+        choices=list(KNOWN_STRATEGIES),
+        default=None,
+        help=(
+            "Decomposition strategy (default: front-matter -> .canon/config.yaml "
+            "-> smart-default). Strategies: tasks (linear), flow (Hopewell waves), "
+            "vertical-slice (demo-able increments), spike-build (research first), "
+            "story-map (epic/activity/story)."
+        ),
+    )
+    pd.add_argument(
+        "--dry-run", action="store_true",
+        help="Parse + run strategy; show what would be created; write nothing.",
+    )
+    pd.add_argument(
+        "--json", dest="json_output", action="store_true",
+        help="Emit a structured JSON summary instead of human-readable text.",
+    )
+    pd.set_defaults(func=cmd_decompose)
+
+    # Deprecated alias: `canon tasks` -> `canon decompose --strategy tasks`.
+    pt = sub.add_parser(
+        "tasks",
+        help="[DEPRECATED] alias for `canon decompose --strategy tasks`",
+    )
     pt.add_argument("spec_id", help="Spec slug (e.g. 001-cache-layer)")
     pt.add_argument("--dry-run", action="store_true",
                     help="Parse the plan + show what would be created; write nothing")
-    pt.set_defaults(func=cmd_tasks)
+    pt.add_argument(
+        "--json", dest="json_output", action="store_true",
+        help="Emit a structured JSON summary instead of human-readable text.",
+    )
+    pt.set_defaults(func=cmd_tasks_alias)
 
     pim = sub.add_parser("implement", help="Dispatch a task via @orchestrator (or directly)")
     pim.add_argument("task_id", help="Hopewell node id (e.g. HW-0001)")
@@ -468,6 +540,23 @@ def _build_parser() -> argparse.ArgumentParser:
     pa.add_argument("id", help="Slug or block-id of the prior block")
     pa.add_argument("--dry-run", action="store_true",
                     help="Show what would be written; mutate nothing")
+    pa.add_argument(
+        "--regenerate", action="store_true",
+        help=(
+            "Re-run the decompose strategy in place (only valid for "
+            "doc-type `plan`). Without this flag, `amend` only patches text "
+            "and preserves the existing strategy."
+        ),
+    )
+    pa.add_argument(
+        "--strategy",
+        choices=list(KNOWN_STRATEGIES),
+        default=None,
+        help=(
+            "When --regenerate is set, override the strategy resolution "
+            "chain and use this strategy explicitly."
+        ),
+    )
     pa.set_defaults(func=cmd_amend)
 
     ptr = sub.add_parser(

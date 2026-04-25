@@ -38,18 +38,44 @@ Canon replaces SpecKit's slash-command surface with a **disciplined, citation-an
 
 ## What phase 1B adds
 
-- `canon tasks <spec-id>` -- generates Hopewell nodes from a plan's
-  `## Decomposition` block; auto-populates each task's `spec-input`
-  citations + sizing metadata + executor suggestion. Idempotent.
+- `canon decompose <spec-id> [--strategy <name>]` -- breaks a plan into
+  work items via a selectable strategy (see the strategies table below).
+  Generates Hopewell nodes from the plan's `## Decomposition` block;
+  auto-populates each item's `spec-input` citations, sizing metadata,
+  executor suggestion, and a `canon` marker for idempotent re-runs.
+  Renamed from `canon tasks` in 0.5.0; the old name still works as a
+  deprecated alias.
 - `canon implement <task-id>` -- assembles a context bundle (cited spec
   slices + universal-context blocks + Mercator dump if present) and
-  pushes the task via `flow.push`. Targets `@orchestrator` when the
-  flow network declares one; otherwise falls back to a direct dispatch
-  to the task's suggested executor.
+  pushes the work item via `flow.push`. Targets `@orchestrator` when
+  the flow network declares one; otherwise falls back to a direct
+  dispatch to the item's suggested executor.
 - `canon check [--strict] [--format=json]` -- citation completeness
   validator. Errors block (exit 1); warnings advisory (exit 2 only
-  under `--strict`). Catches missing citations, orphan tasks/plans,
+  under `--strict`). Catches missing citations, orphan items/plans,
   broken `spec-input` paths, and step-index drift.
+
+### Decompose strategies (0.5.0)
+
+| Strategy         | When to use                                                                        |
+| ---------------- | ---------------------------------------------------------------------------------- |
+| `tasks`          | Default for solo / small change. Linear ordered list with deps. (Original 1B.)     |
+| `flow`           | Hopewell-shaped network: parallel waves + `blocks` edges. Best for hand-offs.      |
+| `vertical-slice` | Each item is a demo-able user-visible increment. No horizontal layer breaks.       |
+| `spike-build`    | High-uncertainty: spike research item first, build items follow + are spike-blocked. |
+| `story-map`      | Epic -> activity -> story hierarchy along the user journey.                        |
+
+Strategy resolution chain (first match wins):
+
+1. CLI flag: `canon decompose --strategy flow`
+2. Plan front-matter: `strategy: flow`
+3. Repo config: `.canon/config.yaml` -> `decompose.strategy: flow`
+4. Smart fallback: if `.hopewell/` AND `.pedia/` are present in the repo
+   tree -> `flow`; else -> `tasks`.
+
+Use `canon amend plan <spec-id> --regenerate --strategy <name>` to swap
+strategies on an existing plan. Plain `canon amend` (no `--regenerate`)
+preserves the current strategy and only patches text.
 
 ## What phase 1C adds -- provenance + history
 
@@ -127,9 +153,10 @@ canon specify cache-layer --from-north-star agent-first-tooling
 # author its plan
 canon plan 001-cache-layer
 
-# derive Hopewell nodes from the plan (phase 1B)
-canon tasks 001-cache-layer
-hopewell list                    # the new nodes show up here
+# break the plan into Hopewell work items (pick a strategy or auto-detect)
+canon decompose 001-cache-layer                  # auto-detect strategy
+canon decompose 001-cache-layer --strategy flow  # parallel-wave flow network
+hopewell list                    # the new work items show up here
 
 # verify the citation chain
 canon check                      # exit 0 if clean
@@ -189,7 +216,7 @@ Canon stores nothing of its own beyond `.canon/config.yaml` and
 dispatch bundles under `.canon/dispatches/<HW-id>.md` (one per
 `canon implement` invocation). Every authored artifact is a Pedia
 block; every task is a Hopewell node with `component_data["spec-input"]`
-populated by `canon tasks`.
+populated by `canon decompose`.
 
 ## Plugin installation (phase 1D)
 
@@ -205,7 +232,8 @@ Five commands are bundled under `canon/plugin/commands/`:
 | ----------------- | ---------------------------------------------------------------- |
 | `/canon-specify` | Authors a spec via the clarity-loop interview                    |
 | `/canon-plan`    | Authors a plan from an existing spec                             |
-| `/canon-tasks`   | Derives Hopewell tasks from a plan's decomposition (phase 1B)    |
+| `/canon-decompose` | Breaks a plan into work items via a selectable strategy (0.5.0+) |
+| `/canon-tasks`   | [DEPRECATED] alias for `/canon-decompose --strategy tasks`       |
 | `/canon-trace`   | Walks the citation graph up or down from any id (phase 1C)       |
 | `/canon-graph`   | Renders the full citation graph as JSON or mermaid (phase 1C)    |
 

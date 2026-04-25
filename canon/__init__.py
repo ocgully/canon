@@ -8,16 +8,17 @@ Phase 1A surface:
   canon config {get|set|list}
 
 Phase 1B surface (additive):
-  canon tasks <spec-id>
+  canon decompose <spec-id> [--strategy <name>]    # 0.5.0+
+  canon tasks <spec-id>                            # deprecated alias
   canon implement <task-id>
   canon check [--strict] [--format=json]
 
 Clarity-loop interviewed. Writes citation-anchored blocks to Pedia.
-Tasks land as Hopewell nodes with auto-populated `spec-input`.
+Work items land as Hopewell nodes with auto-populated `spec-input`.
 Stores nothing of its own except .canon/config.yaml + dispatch
 bundles under .canon/dispatches/.
 
 Buries SpecKit.
 """
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
