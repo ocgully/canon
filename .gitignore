@@ -17,3 +17,8 @@ Thumbs.db
 
 # Canon's runtime config dir (consumers have this; the tool repo does not)
 .canon/
+
+# VS Code extension build artifacts (phase 1D)
+canon/plugin/vscode/node_modules/
+canon/plugin/vscode/*.vsix
+

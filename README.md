@@ -113,6 +113,62 @@ If the binary isn't on PATH, Canon tells you where the context file was written 
 
 Canon stores nothing of its own beyond `.canon/config.yaml`. Every authored artifact is a Pedia block. Phase 1B adds Hopewell nodes for tasks.
 
+## Plugin installation (phase 1D)
+
+Canon ships an optional surface layer for the two environments most agent
+work happens in: Claude Code and VS Code. Both wrappers shell out to the
+same `canon` CLI — they add no behavior of their own.
+
+### Claude Code slash commands
+
+Five commands are bundled under `canon/plugin/commands/`:
+
+| Command           | What it does                                                     |
+| ----------------- | ---------------------------------------------------------------- |
+| `/canon-specify` | Authors a spec via the clarity-loop interview                    |
+| `/canon-plan`    | Authors a plan from an existing spec                             |
+| `/canon-tasks`   | Derives Hopewell tasks from a plan's decomposition (phase 1B)    |
+| `/canon-trace`   | Walks the citation graph up or down from any id (phase 1C)       |
+| `/canon-graph`   | Renders the full citation graph as JSON or mermaid (phase 1C)    |
+
+Install (per-user):
+
+```bash
+mkdir -p ~/.claude/commands
+cp -r canon/plugin/commands/* ~/.claude/commands/
+```
+
+Then `/canon-specify <slug>` becomes available in any Claude Code session.
+
+A phase-2 skill placeholder lives at
+`canon/plugin/skills/canon-review/SKILL.md` — it reserves the namespace
+for the spec-quality assistant described in `canon-plan.md` §11. It
+intentionally does nothing yet.
+
+### VS Code extension
+
+A minimal extension lives at `canon/plugin/vscode/`. It contributes five
+commands under the **Canon:** category (Specify, Plan, Derive Tasks,
+Check, Trace Citations). Sideload locally:
+
+```bash
+cd canon/plugin/vscode
+npx --yes vsce package
+code --install-extension canon-vscode-0.1.0.vsix
+```
+
+The extension uses the `canon` CLI on `PATH`; override via the
+`canon.executable` setting if needed. Marketplace publication is
+deferred to a later phase.
+
+### Future: one-shot install via Flotilla
+
+Once the Flotilla plugin marketplace lands (HW-0051), the recommended
+install path will be `flotilla install canon`, which will (a)
+`pip install canon`, (b) drop the slash commands into `~/.claude/commands/`,
+and (c) sideload the VS Code extension — all from a single registry
+entry. Until then, the manual steps above are the supported path.
+
 ## Development
 
 ```bash
