@@ -1,0 +1,80 @@
+{
+  "name": "canon-vscode",
+  "displayName": "Canon",
+  "description": "VS Code surface for Canon — the SDD discipline tool. Buries SpecKit. Phase 1D.",
+  "version": "0.1.0",
+  "publisher": "ocgully",
+  "license": "Apache-2.0",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "canon",
+    "sdd",
+    "spec-driven-development",
+    "speckit",
+    "pedia",
+    "hopewell"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ocgully/canon.git",
+    "directory": "canon/plugin/vscode"
+  },
+  "main": "./extension.js",
+  "activationEvents": [
+    "onCommand:canon.specify",
+    "onCommand:canon.plan",
+    "onCommand:canon.tasks",
+    "onCommand:canon.check",
+    "onCommand:canon.trace"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "canon.specify",
+        "title": "Canon: Specify",
+        "category": "Canon"
+      },
+      {
+        "command": "canon.plan",
+        "title": "Canon: Plan",
+        "category": "Canon"
+      },
+      {
+        "command": "canon.tasks",
+        "title": "Canon: Derive Tasks",
+        "category": "Canon"
+      },
+      {
+        "command": "canon.check",
+        "title": "Canon: Check",
+        "category": "Canon"
+      },
+      {
+        "command": "canon.trace",
+        "title": "Canon: Trace Citations",
+        "category": "Canon"
+      }
+    ],
+    "configuration": {
+      "title": "Canon",
+      "properties": {
+        "canon.executable": {
+          "type": "string",
+          "default": "canon",
+          "description": "Path to the canon CLI executable (default: 'canon' on PATH)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "echo 'no-op'"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0"
+  }
+}
