@@ -5,7 +5,7 @@ Covers:
     `001-cache-layer` lineage fixture.
   - The resolver picks strategies in the right priority (cli ->
     front-matter -> config -> smart-default).
-  - End-to-end: `canon decompose` materializes Hopewell nodes carrying
+  - End-to-end: `canon decompose` materializes TaskFlow nodes carrying
     the correct `canon` marker for every strategy.
   - The deprecated `canon tasks` alias still works and forwards to the
     `tasks` strategy.
@@ -36,7 +36,7 @@ from tests.fixtures.lineage import build_lineage, deps_available
 
 
 pytestmark = pytest.mark.skipif(
-    not deps_available(), reason="pedia + hopewell required"
+    not deps_available(), reason="pedia + taskflow required"
 )
 
 
@@ -184,15 +184,16 @@ def test_resolver_config_wins_over_smart_default(tmp_path: Path):
 
 
 def test_resolver_smart_default_picks_flow_when_both_present(tmp_path: Path):
-    # build_lineage gives us BOTH .pedia/ and .hopewell/ at tmp_path.
+    # build_lineage gives us BOTH .pedia/ and .hopewell/ (legacy work-graph dir) at tmp_path.
+    # The dual-detect smart-fallback accepts either .taskflow/ or .hopewell/.
     plan = _load_canned_plan(tmp_path)
     plan.front_matter.pop("strategy", None)
     name, source = resolve_strategy(None, plan, tmp_path, cwd=tmp_path)
     assert (name, source) == ("flow", "smart-default")
 
 
-def test_resolver_smart_default_picks_tasks_without_hopewell(tmp_path: Path):
-    # Bare directory: no .hopewell/, no .pedia/.
+def test_resolver_smart_default_picks_tasks_without_taskflow(tmp_path: Path):
+    # Bare directory: no .taskflow/ or .hopewell/, no .pedia/.
     bare = tmp_path / "bare"
     bare.mkdir()
     name, source = resolve_strategy(None, None, None, cwd=bare)
@@ -205,11 +206,11 @@ def test_resolver_rejects_unknown_strategy_loudly():
 
 
 # ---------------------------------------------------------------------------
-# Dispatch -- end-to-end against a Hopewell project
+# Dispatch -- end-to-end against a TaskFlow project
 # ---------------------------------------------------------------------------
 
 
-def test_run_strategy_materializes_tasks_into_hopewell(tmp_path: Path):
+def test_run_strategy_materializes_tasks_into_taskflow(tmp_path: Path):
     plan = _load_canned_plan(tmp_path)
     result, name, source = run_strategy(
         root=tmp_path, plan=plan, cli_strategy="tasks",
@@ -253,7 +254,7 @@ def test_dry_run_does_not_persist(tmp_path: Path):
         root=tmp_path, plan=plan, cli_strategy="flow", dry_run=True,
     )
     assert all("dry-run" in s for s in result.created)
-    # The Hopewell project should still be empty.
+    # The TaskFlow project should still be empty.
     from taskflow import project as hw_project
     project = hw_project.Project.load(start=tmp_path)
     assert project.all_nodes() == []

@@ -6,7 +6,9 @@
 # project consuming Canon inherits the same discipline.
 .pedia/
 
-# Hopewell owns .hopewell/; same rule.
+# TaskFlow owns .taskflow/; same rule. Legacy .hopewell/ also kept here so
+# projects that haven't migrated yet still benefit from the same gate.
+.taskflow/
 .hopewell/
 
 # pedia:managed -- agents must query via the `pedia` CLI, never read .pedia/ directly

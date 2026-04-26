@@ -59,7 +59,7 @@ Per-field overrides live in the schema source; to change a per-field threshold t
   context.json     # machine-readable sidecar
 ```
 
-Then invokes the named binary with `--` stop-parsing, streams stdout back, and substitutes as the refined answer. If the binary isn't on PATH, the files are still written and the command runs the rules-only path. This is the same pattern as Sextant's AI conversation panel: Canon assembles context, the agent session holds the conversation.
+Then invokes the named binary with `--` stop-parsing, streams stdout back, and substitutes as the refined answer. If the binary isn't on PATH, the files are still written and the command runs the rules-only path. This is the same pattern as DiffSextant's AI conversation panel: Canon assembles context, the agent session holds the conversation.
 
 Nothing is phoned home from Canon. No API key is required. No telemetry.
 

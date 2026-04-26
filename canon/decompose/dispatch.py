@@ -7,8 +7,8 @@
     strategy in place; existing canon-marked work items are
     preserved on a (slug, kind, strategy_index) match for idempotency).
 
-When `.hopewell/` is initialized in the project, work items become
-Hopewell nodes carrying:
+When `.taskflow/` (or legacy `.hopewell/`) is initialized in the project,
+work items become TaskFlow nodes carrying:
 
   component_data["spec-input"]            -> citations into the spec + plan
   component_data["executor-suggestion"]   -> {"role": "agent|service|gate"}
@@ -17,9 +17,9 @@ Hopewell nodes carrying:
                                               "strategy_index": N, ...}
   component_data["canon"]["strategy_meta"] -> per-strategy metadata blob
 
-When Hopewell isn't initialized -- or `--dry-run` is set -- we emit the
+When TaskFlow isn't initialized -- or `--dry-run` is set -- we emit the
 same shape as plain JSON to stdout and create no nodes. This keeps the
-strategies usable in environments that haven't adopted Hopewell yet.
+strategies usable in environments that haven't adopted TaskFlow yet.
 """
 from __future__ import annotations
 
@@ -47,8 +47,8 @@ from canon.decompose.strategies import REGISTRY
 # ---------------------------------------------------------------------------
 
 
-def _load_hopewell():
-    """Try the new taskflow package; fall back to legacy hopewell."""
+def _load_taskflow():
+    """Load the taskflow package; fall back to the legacy hopewell name."""
     try:
         try:
             from taskflow import project as hw_project  # type: ignore
@@ -59,13 +59,13 @@ def _load_hopewell():
         return hw_project, EdgeKind, NodeStatus
     except Exception as e:
         raise RuntimeError(
-            f"taskflow / hopewell is not importable ({e}); install with "
+            f"taskflow is not importable ({e}); install with "
             "`pip install taskflow` to use `canon decompose` against a "
-            "TaskFlow (formerly Hopewell) project"
+            "TaskFlow project"
         )
 
 
-def _hopewell_present(root: Path) -> bool:
+def _taskflow_present(root: Path) -> bool:
     """Detect either the new `.taskflow/` or legacy `.hopewell/` storage dir."""
     return (root / ".taskflow").is_dir() or (root / ".hopewell").is_dir()
 
@@ -131,18 +131,18 @@ def _existing_open_question_index(project) -> Dict[Tuple[str, str], str]:
 
 
 # ---------------------------------------------------------------------------
-# Materialize a StrategyResult into Hopewell nodes
+# Materialize a StrategyResult into TaskFlow nodes
 # ---------------------------------------------------------------------------
 
 
-def _materialize_into_hopewell(
+def _materialize_into_taskflow(
     project,
     plan: ParsedPlan,
     sresult: StrategyResult,
     *,
     dry_run: bool,
 ) -> DecomposeResult:
-    _, EdgeKind, _ = _load_hopewell()
+    _, EdgeKind, _ = _load_taskflow()
     out = DecomposeResult(strategy=sresult.strategy, extras=dict(sresult.extras))
     existing = _existing_canon_index(project)
     existing_oq = _existing_open_question_index(project)
@@ -255,7 +255,7 @@ def _materialize_into_hopewell(
 
 
 def _items_to_json(plan: ParsedPlan, sresult: StrategyResult) -> Dict[str, Any]:
-    """Plain-JSON shape for environments without Hopewell (or --dry-run)."""
+    """Plain-JSON shape for environments without TaskFlow (or --dry-run)."""
     return {
         "spec_slug": plan.spec_slug,
         "strategy": sresult.strategy,
@@ -301,7 +301,7 @@ def run_strategy(
     resolver returned (cli / front-matter / config / smart-default) so
     the CLI can print provenance.
 
-    If `project` is None, we attempt to load Hopewell. If Hopewell is
+    If `project` is None, we attempt to load TaskFlow. If TaskFlow is
     not present in the project we fall through to the JSON-only path
     and the caller is responsible for printing.
     """
@@ -313,33 +313,33 @@ def run_strategy(
         )
     sresult: StrategyResult = REGISTRY[strategy_name].run(plan)
 
-    # Hopewell path -- attempt to load if a project is present, even on
+    # TaskFlow path -- attempt to load if a project is present, even on
     # dry-run (so the operator sees the same idempotency-aware preview
     # they'll get on the real run).
-    if project is None and _hopewell_present(root):
+    if project is None and _taskflow_present(root):
         try:
-            hw_project, _, _ = _load_hopewell()
+            hw_project, _, _ = _load_taskflow()
             project = hw_project.Project.load(start=root)
         except Exception:
             project = None
 
     if project is not None:
-        result = _materialize_into_hopewell(
+        result = _materialize_into_taskflow(
             project, plan, sresult, dry_run=dry_run
         )
         return result, strategy_name, source
 
-    # JSON-only path (no Hopewell, or dry_run with no project): we still
+    # JSON-only path (no TaskFlow, or dry_run with no project): we still
     # populate a DecomposeResult that mirrors the planned items so callers
     # (and tests) can inspect it. `created` carries dry-run stubs.
     result = DecomposeResult(
         strategy=strategy_name,
         extras=dict(sresult.extras),
-        open_questions=[f"<no-hw open-question: {q[:80]}>" for q in sresult.open_questions],
+        open_questions=[f"<no-tf open-question: {q[:80]}>" for q in sresult.open_questions],
     )
     for it in sresult.items:
         result.created.append(
-            f"<no-hw {strategy_name} item {it.index}: {it.title}>"
+            f"<no-tf {strategy_name} item {it.index}: {it.title}>"
         )
     result.extras["json"] = _items_to_json(plan, sresult)
     return result, strategy_name, source
@@ -411,8 +411,8 @@ def _print_summary(
         for wave, idxs in result.extras["waves"].items():
             sys.stdout.write(f"    wave {wave}: {idxs}\n")
     if "json" in result.extras:
-        # No Hopewell -- print the JSON payload so callers can pipe it.
-        sys.stdout.write("\n--- JSON output (no Hopewell project detected) ---\n")
+        # No TaskFlow -- print the JSON payload so callers can pipe it.
+        sys.stdout.write("\n--- JSON output (no TaskFlow project detected) ---\n")
         sys.stdout.write(json.dumps(result.extras["json"], indent=2) + "\n")
 
 

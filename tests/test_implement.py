@@ -16,12 +16,12 @@ from tests.fixtures.lineage import build_lineage, deps_available
 
 
 pytestmark = pytest.mark.skipif(
-    not deps_available(), reason="pedia + hopewell required"
+    not deps_available(), reason="pedia + taskflow required"
 )
 
 
 def _bootstrap_default_network(tmp_path: Path):
-    """Equivalent to `hopewell network defaults bootstrap`."""
+    """Equivalent to `taskflow network defaults bootstrap`."""
     from taskflow import network as hw_network
     from taskflow import network_defaults as hw_defaults
     hw_network.ensure_network_dir(tmp_path)
@@ -47,7 +47,7 @@ def test_has_orchestrator_true_after_default_template(tmp_path: Path):
     _bootstrap_default_network(tmp_path)
     from taskflow import project as hw_project
     project2 = hw_project.Project.load(start=tmp_path)
-    # Hopewell's default template includes @orchestrator.
+    # TaskFlow's default template includes @orchestrator.
     assert has_orchestrator(project2) is True
 
 

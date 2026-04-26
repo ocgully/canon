@@ -10,9 +10,9 @@ Validations (phase 1B):
   - spec block has neither north-star nor constitution citation
   - plan present but its `cites.spec` (or `spec_slug`) is missing/empty
     or points to a spec that doesn't exist
-  - Hopewell task with `component_data.canon.spec_slug` references a
+  - TaskFlow task with `component_data.canon.spec_slug` references a
     spec that doesn't exist (orphan task)
-  - Hopewell task with `component_data.spec-input` references a path
+  - TaskFlow task with `component_data.spec-input` references a path
     that doesn't exist on disk
   - plan present without a corresponding spec.md sibling (orphan plan)
 
@@ -20,7 +20,7 @@ Validations (phase 1B):
   =======
   - spec missing constitutional citation (when constitution/ has files)
   - plan missing decomposition steps (no tasks possible)
-  - Hopewell tasks exist for a spec but no plan was found
+  - TaskFlow tasks exist for a spec but no plan was found
   - tasks claiming a plan_step_index >= len(decomposition)
 
 Exit codes:
@@ -288,7 +288,7 @@ def _check_plan(spec_dir: Path, root: Path, report: CheckReport) -> Tuple[bool, 
 
 
 # ---------------------------------------------------------------------------
-# Hopewell side
+# TaskFlow side
 # ---------------------------------------------------------------------------
 
 

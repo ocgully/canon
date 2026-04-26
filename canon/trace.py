@@ -7,7 +7,7 @@ The `<id>` may be:
     * a Pedia block id (16-hex content-hash)            e.g.  ab12cd34ef567890
     * a spec slug                                        e.g.  001-cache-layer
     * a north-star slug                                  e.g.  agent-first-tooling
-    * a Hopewell task id                                 e.g.  HW-0042
+    * a TaskFlow task id                                 e.g.  HW-0042
 
 The traversal:
 
@@ -16,9 +16,9 @@ The traversal:
   --down walks edges that CITE this id (downstream consumers).
 
 Pedia walks use `pedia.trace.walk(direction='up'|'down', depth=N)`.
-Hopewell-task walks compose Hopewell node-edge traversal with a Pedia
+TaskFlow-task walks compose TaskFlow node-edge traversal with a Pedia
 walk anchored at the task's cited plan-block (via the spec-input
-ref). If Hopewell is missing we degrade to Pedia-only.
+ref). If TaskFlow is missing we degrade to Pedia-only.
 
 Leaf nodes (no further edges in the requested direction) are emitted
 with a `[leaf]` marker so the user can spot uncited (orphan) entities.
@@ -39,7 +39,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 @dataclass
 class ResolvedId:
-    kind: str       # "pedia-block" | "hopewell-task"
+    kind: str       # "pedia-block" | "taskflow-task"
     pedia_id: Optional[str] = None
     task_id: Optional[str] = None
     label: str = ""
@@ -50,7 +50,7 @@ def _looks_like_block_id(s: str) -> bool:
     return len(s) == 16 and all(c in "0123456789abcdef" for c in s.lower())
 
 
-def _looks_like_hopewell_id(s: str) -> bool:
+def _looks_like_taskflow_id(s: str) -> bool:
     return s.upper().startswith("HW-")
 
 
@@ -106,9 +106,9 @@ def _resolve_pedia_id(root: Path, identifier: str) -> Optional[Tuple[str, str]]:
 
 
 def resolve(root: Path, identifier: str) -> ResolvedId:
-    if _looks_like_hopewell_id(identifier):
+    if _looks_like_taskflow_id(identifier):
         return ResolvedId(
-            kind="hopewell-task",
+            kind="taskflow-task",
             task_id=identifier.upper(),
             label=identifier.upper(),
         )
@@ -179,18 +179,18 @@ def _compute_leaves(root: Path, ids: List[str], direction: str) -> Set[str]:
 
 
 # ---------------------------------------------------------------------------
-# Hopewell walk (best-effort)
+# TaskFlow walk (best-effort)
 # ---------------------------------------------------------------------------
 
 
-def walk_hopewell(root: Path, task_id: str, direction: str,
+def walk_taskflow(root: Path, task_id: str, direction: str,
                   depth: int) -> List[Dict[str, Any]]:
-    """Walk Hopewell's node-edge graph for a task id.
+    """Walk TaskFlow's node-edge graph for a task id.
 
     --up  : transitive blockers / requires (what this task depends on)
     --down: transitive blocks (what depends on this task)
 
-    Falls back gracefully -- if neither taskflow nor hopewell is
+    Falls back gracefully -- if neither taskflow nor legacy hopewell is
     importable, returns [].
     """
     try:
@@ -244,7 +244,7 @@ class TraceResult:
     direction: str
     root_id: str
     pedia_walk: List[Dict[str, Any]] = field(default_factory=list)
-    hopewell_walk: List[Dict[str, Any]] = field(default_factory=list)
+    taskflow_walk: List[Dict[str, Any]] = field(default_factory=list)
     resolved: Optional[ResolvedId] = None
 
 
@@ -254,13 +254,13 @@ def run_trace(root: Path, identifier: str, *, direction: str,
         raise ValueError("direction must be 'up' or 'down'")
     resolved = resolve(root, identifier)
     pedia_rows: List[Dict[str, Any]] = []
-    hopewell_rows: List[Dict[str, Any]] = []
-    if resolved.kind == "hopewell-task":
-        hopewell_rows = walk_hopewell(root, resolved.task_id or identifier,
+    taskflow_rows: List[Dict[str, Any]] = []
+    if resolved.kind == "taskflow-task":
+        taskflow_rows = walk_taskflow(root, resolved.task_id or identifier,
                                       direction, depth)
         # Try also to walk Pedia from the task's cited plan-block, if we
-        # can find a Hopewell node-file that points to one. Best-effort.
-        plan_block_id = _hopewell_task_to_plan_block(root, resolved.task_id or identifier)
+        # can find a TaskFlow node-file that points to one. Best-effort.
+        plan_block_id = _taskflow_task_to_plan_block(root, resolved.task_id or identifier)
         if plan_block_id:
             pedia_rows = walk_pedia(root, plan_block_id, direction, depth)
     else:
@@ -270,27 +270,36 @@ def run_trace(root: Path, identifier: str, *, direction: str,
         direction=direction,
         root_id=identifier,
         pedia_walk=pedia_rows,
-        hopewell_walk=hopewell_rows,
+        taskflow_walk=taskflow_rows,
         resolved=resolved,
     )
 
 
-def _hopewell_task_to_plan_block(root: Path, task_id: str) -> Optional[str]:
-    """Best-effort: ask Hopewell what plan-block this task cites.
+def _taskflow_task_to_plan_block(root: Path, task_id: str) -> Optional[str]:
+    """Best-effort: ask TaskFlow what plan-block this task cites.
 
     Phase 1B is expected to record this as a `spec-input` ref on the
-    Hopewell node. We just call out and parse; failure is non-fatal.
+    TaskFlow node. We just call out and parse; failure is non-fatal.
+    The legacy `hopewell` CLI is tried as a fallback.
     """
-    try:
-        import subprocess
-        proc = subprocess.run(
-            ["hopewell", "show", task_id, "--format", "json"],
-            cwd=str(root), capture_output=True, text=True, check=False, timeout=10,
-        )
-        if proc.returncode != 0:
+    import subprocess
+    for cli_name in ("taskflow", "hopewell"):
+        try:
+            proc = subprocess.run(
+                [cli_name, "show", task_id, "--format", "json"],
+                cwd=str(root), capture_output=True, text=True, check=False, timeout=10,
+            )
+        except FileNotFoundError:
+            continue
+        except Exception:
             return None
-        data = json.loads(proc.stdout or "{}")
-        # Hopewell may store this under different key names; try a few.
+        if proc.returncode != 0:
+            continue
+        try:
+            data = json.loads(proc.stdout or "{}")
+        except Exception:
+            continue
+        # The CLI may store this under different key names; try a few.
         for k in ("spec_input_block_id", "plan_block_id", "cited_block_id"):
             v = data.get(k)
             if v:
@@ -301,8 +310,6 @@ def _hopewell_task_to_plan_block(root: Path, task_id: str) -> Optional[str]:
                 bid = r.get("block_id") or r.get("dst_id")
                 if bid:
                     return str(bid)
-    except Exception:
-        return None
     return None
 
 
@@ -315,8 +322,8 @@ def format_text(tr: TraceResult) -> str:
     lines: List[str] = []
     arrow = "->" if tr.direction == "up" else "<-"
     lines.append(f"=== canon trace --{tr.direction} {tr.root_id} ===")
-    if tr.resolved and tr.resolved.kind == "hopewell-task":
-        lines.append(f"resolved: hopewell task {tr.resolved.task_id}")
+    if tr.resolved and tr.resolved.kind == "taskflow-task":
+        lines.append(f"resolved: taskflow task {tr.resolved.task_id}")
     elif tr.resolved and tr.resolved.pedia_id:
         lines.append(f"resolved: pedia block {tr.resolved.pedia_id}"
                      + (f" ({tr.resolved.doc_path})" if tr.resolved.doc_path else ""))
@@ -333,17 +340,17 @@ def format_text(tr: TraceResult) -> str:
             doc = r.get("doc_path") or ""
             leaf = "  [leaf]" if r.get("leaf") else ""
             lines.append(f'{indent}[block:{r["id"]}] {doc} @ "{heading}"{via_s}{leaf}')
-    if tr.hopewell_walk:
+    if tr.taskflow_walk:
         lines.append("")
-        lines.append(f"hopewell walk (direction {arrow}):")
-        for r in tr.hopewell_walk:
+        lines.append(f"taskflow walk (direction {arrow}):")
+        for r in tr.taskflow_walk:
             indent = "  " * (r.get("depth") or 0)
             via = r.get("via") or ""
             via_s = f"  [via {via}]" if via else ""
             title = r.get("title") or ""
             status = r.get("status") or ""
             lines.append(f'{indent}{r["id"]} {title} ({status}){via_s}')
-    if not tr.pedia_walk and not tr.hopewell_walk:
+    if not tr.pedia_walk and not tr.taskflow_walk:
         lines.append("")
         lines.append("(no edges found in this direction)")
     return "\n".join(lines) + "\n"
@@ -356,7 +363,7 @@ def format_json(tr: TraceResult) -> str:
             "root_id": tr.root_id,
             "resolved": _resolved_to_dict(tr.resolved),
             "pedia_walk": tr.pedia_walk,
-            "hopewell_walk": tr.hopewell_walk,
+            "taskflow_walk": tr.taskflow_walk,
         },
         indent=2,
     )
@@ -411,8 +418,8 @@ def format_mermaid(tr: TraceResult) -> str:
                     else:
                         lines.append(f'  n_{nid} {arrow}|{r.get("via","cites")}| n_{pid}')
             parent_by_depth[d] = nid
-    if tr.hopewell_walk:
-        for r in tr.hopewell_walk:
+    if tr.taskflow_walk:
+        for r in tr.taskflow_walk:
             nid = r["id"] or "?"
             node(nid, f"{nid}\\n{r.get('title','')}")
 

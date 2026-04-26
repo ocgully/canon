@@ -12,7 +12,10 @@ Lays down:
   - .pedia/constitution/technical.md
   - .pedia/specs/001-cache-layer/spec.md
   - .pedia/specs/001-cache-layer/plan.md
-  - .hopewell/         (via hopewell init)
+  - .hopewell/         (legacy work-graph dir; the smart-detect accepts
+                        either .taskflow/ or .hopewell/, and the legacy
+                        layout is what the installed `taskflow` package
+                        still writes today)
 """
 from __future__ import annotations
 

@@ -24,7 +24,7 @@ Output shape
 ------------
 The result is FLAT (a list of WorkItems) but every item has a
 `metadata.row` (epic / activity / story) and `metadata.parent_index`.
-The dispatch layer encodes parent links as Hopewell `requires` edges
+The dispatch layer encodes parent links as TaskFlow `requires` edges
 and the row tag in component_data so the UI can re-build the map.
 """
 from __future__ import annotations

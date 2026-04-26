@@ -17,7 +17,7 @@ from tests.fixtures.lineage import build_lineage, deps_available
 
 
 pytestmark = pytest.mark.skipif(
-    not deps_available(), reason="pedia + hopewell required"
+    not deps_available(), reason="pedia + taskflow required"
 )
 
 
@@ -162,7 +162,7 @@ def test_amend_canned_answers_helper_pads_with_accept():
 
 def test_amend_task_raises_until_phase_1b_provides(tmp_path: Path):
     build_lineage(tmp_path)
-    # Hopewell IS importable here, so we hit NotImplementedError (not RuntimeError).
+    # TaskFlow IS importable here, so we hit NotImplementedError (not RuntimeError).
     with pytest.raises(NotImplementedError):
         amend_mod.amend(tmp_path, "task", "HW-0001")
 

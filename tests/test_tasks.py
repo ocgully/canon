@@ -1,5 +1,5 @@
 """Tests for canon.tasks -- plan parsing, executor heuristics, ordering,
-derive_tasks against a real Hopewell project.
+derive_tasks against a real TaskFlow project.
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from tests.fixtures.lineage import build_lineage, deps_available
 
 
 pytestmark = pytest.mark.skipif(
-    not deps_available(), reason="pedia + hopewell required"
+    not deps_available(), reason="pedia + taskflow required"
 )
 
 

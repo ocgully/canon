@@ -14,7 +14,7 @@ Phase 1B surface (additive):
   canon check [--strict] [--format=json]
 
 Clarity-loop interviewed. Writes citation-anchored blocks to Pedia.
-Work items land as Hopewell nodes with auto-populated `spec-input`.
+Work items land as TaskFlow nodes with auto-populated `spec-input`.
 Stores nothing of its own except .canon/config.yaml + dispatch
 bundles under .canon/dispatches/.
 

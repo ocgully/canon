@@ -12,7 +12,7 @@ from tests.test_trace import _seed_cite_edges
 
 
 pytestmark = pytest.mark.skipif(
-    not deps_available(), reason="pedia + hopewell required"
+    not deps_available(), reason="pedia + taskflow required"
 )
 
 

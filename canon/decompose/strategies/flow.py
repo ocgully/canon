@@ -1,19 +1,20 @@
-"""Strategy: `flow` -- Hopewell-shaped flow network.
+"""Strategy: `flow` -- TaskFlow-shaped flow network.
 
 Emits typed work items + `blocks` edges + parallel waves, optimized for
-the Hopewell `flow.push` runtime (push-to-inbox semantics; see
-`hopewell/flow.py`). Each item carries:
+the TaskFlow `flow.push` runtime (push-to-inbox semantics; see
+`taskflow/flow.py`). Each item carries:
 
   - `wave`: integer (0-based) -- items in the same wave can run in
     parallel; items in wave N depend on at least one item in wave <N.
   - `parallel_with`: indexes of sibling items in the same wave (handy
     for UIs rendering swim-lanes).
 
-When the surrounding project has `.hopewell/` initialized, the
-dispatch layer materializes these items as Hopewell nodes and writes
-real `blocks` edges into the graph. When Hopewell is absent (e.g.
-`canon decompose --strategy flow` in a bare repo), the dispatch layer
-falls back to plain JSON output that preserves the same shape.
+When the surrounding project has `.taskflow/` (or legacy `.hopewell/`)
+initialized, the dispatch layer materializes these items as TaskFlow
+nodes and writes real `blocks` edges into the graph. When TaskFlow is
+absent (e.g. `canon decompose --strategy flow` in a bare repo), the
+dispatch layer falls back to plain JSON output that preserves the same
+shape.
 
 Wave assignment: longest-blocking-path topological levels. Items with
 no blockers land in wave 0. Item X lands in wave (max(wave[blocker])+1).

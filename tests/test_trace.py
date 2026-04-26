@@ -12,7 +12,7 @@ from tests.fixtures.lineage import build_lineage, deps_available
 
 
 pytestmark = pytest.mark.skipif(
-    not deps_available(), reason="pedia + hopewell required"
+    not deps_available(), reason="pedia + taskflow required"
 )
 
 
@@ -74,10 +74,10 @@ def test_resolve_north_star_slug(tmp_path: Path):
     assert r.doc_path == "north-stars/agent-first.md"
 
 
-def test_resolve_hopewell_id(tmp_path: Path):
+def test_resolve_taskflow_id(tmp_path: Path):
     build_lineage(tmp_path)
     r = trace_mod.resolve(tmp_path, "HW-0001")
-    assert r.kind == "hopewell-task"
+    assert r.kind == "taskflow-task"
     assert r.task_id == "HW-0001"
 
 

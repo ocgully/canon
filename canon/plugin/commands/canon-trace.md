@@ -14,7 +14,7 @@ canon trace $ARGUMENTS
 What this does:
 
 - `--up` (default): walks parent citations — task → plan → spec → constitution / north-star.
-- `--down`: walks children — north-star → specs that cite it → plans → Hopewell tasks → implementations.
+- `--down`: walks children — north-star → specs that cite it → plans → TaskFlow tasks → implementations.
 - `--depth N`: bounds traversal (default 5).
 
 The output is a JSON tree (or pretty-printed tree if stdout is a TTY) where every edge is a structural citation, never a filename convention.
@@ -22,7 +22,7 @@ The output is a JSON tree (or pretty-printed tree if stdout is a TTY) where ever
 Typical uses:
 
 - Before refactoring a north-star: `canon trace agent-first-tooling --down` shows everything that would drift.
-- Investigating a Hopewell ticket: `canon trace HW-0042 --up` walks back to the spec, plan, and constitutional principles that motivated it.
+- Investigating a TaskFlow ticket: `canon trace HW-0042 --up` walks back to the spec, plan, and constitutional principles that motivated it.
 - Drift audit: `canon trace <spec-id>` (no direction) shows both up and down.
 
-This is the answer to SpecKit's "traceability is sibling-filename convention" weakness — Canon's traces are walks across a real typed graph (Pedia blocks + Hopewell nodes + cites/supersedes/spec-input edges).
+This is the answer to SpecKit's "traceability is sibling-filename convention" weakness — Canon's traces are walks across a real typed graph (Pedia blocks + TaskFlow nodes + cites/supersedes/spec-input edges).

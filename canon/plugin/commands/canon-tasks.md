@@ -19,7 +19,7 @@ What this does:
 1. Loads `.pedia/specs/<spec-id>/plan.md` and parses its decomposition.
 2. Forces the `tasks` strategy (linear ordered work items with deps),
    skipping the resolver chain.
-3. Materializes each work item as a Hopewell node with `spec-input`,
+3. Materializes each work item as a TaskFlow node with `spec-input`,
    `executor-suggestion`, `sizing`, and a `canon` marker.
 
 Prefer `/canon-decompose <spec-id> [--strategy <name>]` going forward.
@@ -28,4 +28,4 @@ See `/canon-decompose` for the full strategy catalog.
 Requires:
 
 - `pip install canon`.
-- `.hopewell/` initialized in the project.
+- `.taskflow/` (or legacy `.hopewell/`) initialized in the project.

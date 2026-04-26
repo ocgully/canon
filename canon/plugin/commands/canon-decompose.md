@@ -18,9 +18,9 @@ What this does:
    - `--strategy <name>` flag,
    - the plan's front-matter (`strategy: <name>`),
    - `.canon/config.yaml` (`decompose.strategy: <name>`),
-   - smart fallback: `flow` when `.hopewell/` AND `.pedia/` are present, else `tasks`.
-3. Runs the strategy and -- when a Hopewell project is present -- materializes
-   each work item as a Hopewell node with:
+   - smart fallback: `flow` when `.taskflow/` (or legacy `.hopewell/`) AND `.pedia/` are present, else `tasks`.
+3. Runs the strategy and -- when a TaskFlow project is present -- materializes
+   each work item as a TaskFlow node with:
    - `spec-input` auto-populated (spec slices + plan slice the item derives from),
    - `executor-suggestion` (agent / service / gate, advisory),
    - `sizing` metadata when the bullet declared XS/S/M/L,
@@ -36,7 +36,7 @@ Strategies available:
 | Name             | When to use                                                     |
 | ---------------- | --------------------------------------------------------------- |
 | `tasks`          | Default for solo / small change. Linear ordered list with deps. |
-| `flow`           | Hopewell-shaped network with parallel waves. Best when handing  |
+| `flow`           | TaskFlow-shaped network with parallel waves. Best when handing  |
 |                  | items off across executors (agents / services / gates).         |
 | `vertical-slice` | Each item is a demo-able user-visible increment (no horizontal  |
 |                  | layer breaks). Drops serial layer ordering.                     |
@@ -46,10 +46,10 @@ Strategies available:
 
 Requires:
 
-- `pip install canon` (canon ships with hopewell as a runtime dep).
-- `.hopewell/` initialized in the project (run `hopewell init` once).
+- `pip install canon` (canon ships with taskflow as a runtime dep).
+- `.taskflow/` initialized in the project (run `taskflow init` once).
 
-After this step, run `hopewell ready` (NOT `ls .hopewell/`) to see what's
+After this step, run `taskflow ready` (NOT `ls .taskflow/`) to see what's
 available to pick up, or `/canon-implement <work-item-id>` to dispatch via
 the orchestrator.
 

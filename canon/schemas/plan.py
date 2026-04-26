@@ -63,7 +63,7 @@ PLAN_SCHEMA = Schema(
         FieldSchema(
             name="open_questions",
             prompt="Open questions -- one per line. Each becomes a "
-            "Hopewell 'open-question' node in phase 1B. Blank to skip.",
+            "TaskFlow 'open-question' node in phase 1B. Blank to skip.",
             required=False,
         ),
     ],

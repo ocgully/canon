@@ -109,8 +109,8 @@ def cmd_init(args) -> int:
     else:
         _write(msg)
 
-    # TaskFlow / Hopewell is optional in 1A.
-    if args.link_hopewell:
+    # TaskFlow is optional in 1A. (Legacy `hopewell` package still accepted.)
+    if args.link_taskflow:
         try:
             try:
                 import taskflow as _tf  # noqa: F401
@@ -121,7 +121,7 @@ def cmd_init(args) -> int:
                 ver = getattr(_hw, "__version__", "unknown")
                 _write(f"hopewell (legacy) importable: {ver}")
         except Exception as e:
-            _write(f"warning: taskflow/hopewell not importable ({e}); "
+            _write(f"warning: taskflow not importable ({e}); "
                    f"phase 1B needs it for task derivation.")
 
     _write("")
@@ -361,7 +361,7 @@ def cmd_amend(args) -> int:
         _write("  pedia refs: supersedes edge written")
     if result.get("drift"):
         _write("")
-        _write("hopewell drift surfaced:")
+        _write("taskflow drift surfaced:")
         for ln in result["drift"].splitlines():
             _write(f"  {ln}")
     return 0
@@ -446,8 +446,13 @@ def _build_parser() -> argparse.ArgumentParser:
     pi = sub.add_parser("init", help="Scaffold .canon/ in this directory")
     pi.add_argument("--link-pedia", action="store_true",
                     help="Also run `pedia init` if .pedia/ is missing")
+    pi.add_argument("--link-taskflow", action="store_true",
+                    dest="link_taskflow",
+                    help="Verify taskflow is importable (1B dep; optional in 1A)")
+    # Backward-compat alias for users with --link-hopewell muscle memory.
     pi.add_argument("--link-hopewell", action="store_true",
-                    help="Verify hopewell is importable (1B dep; optional in 1A)")
+                    dest="link_taskflow",
+                    help=argparse.SUPPRESS)
     pi.add_argument("--force", action="store_true", help="Overwrite existing config")
     pi.set_defaults(func=cmd_init)
 
@@ -493,7 +498,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "Decomposition strategy (default: front-matter -> .canon/config.yaml "
-            "-> smart-default). Strategies: tasks (linear), flow (Hopewell waves), "
+            "-> smart-default). Strategies: tasks (linear), flow (TaskFlow waves), "
             "vertical-slice (demo-able increments), spike-build (research first), "
             "story-map (epic/activity/story)."
         ),
@@ -523,7 +528,7 @@ def _build_parser() -> argparse.ArgumentParser:
     pt.set_defaults(func=cmd_tasks_alias)
 
     pim = sub.add_parser("implement", help="Dispatch a task via @orchestrator (or directly)")
-    pim.add_argument("task_id", help="Hopewell node id (e.g. HW-0001)")
+    pim.add_argument("task_id", help="TaskFlow node id (e.g. HW-0001)")
     pim.add_argument("--dry-run", action="store_true",
                      help="Build the bundle + show the target; do not push")
     pim.set_defaults(func=cmd_implement)
@@ -570,7 +575,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "trace",
         help="Walk the citation graph upstream or downstream from a block / task",
     )
-    ptr.add_argument("id", help="Pedia block-id, spec slug, or Hopewell task id")
+    ptr.add_argument("id", help="Pedia block-id, spec slug, or TaskFlow task id")
     dir_grp = ptr.add_mutually_exclusive_group()
     dir_grp.add_argument("--up", action="store_true",
                          help="Walk upstream citations (this -> what it cites)")

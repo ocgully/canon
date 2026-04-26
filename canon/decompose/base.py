@@ -243,9 +243,9 @@ def sizing_estimate(sizing: Optional[str]) -> Optional[Dict[str, Any]]:
 class WorkItem:
     """A strategy-emitted work item, pre-materialization.
 
-    Strategies return these; the dispatch layer turns them into Hopewell
-    nodes (when a Hopewell project is loaded) or returns them as plain
-    JSON (when --dry-run or when Hopewell is absent).
+    Strategies return these; the dispatch layer turns them into TaskFlow
+    nodes (when a TaskFlow project is loaded) or returns them as plain
+    JSON (when --dry-run or when TaskFlow is absent).
 
     `kind` is a strategy-specific tag used downstream for display +
     flow-network shaping (e.g. `spike` vs `build`, `slice`, `activity`).
@@ -257,7 +257,7 @@ class WorkItem:
     can run in parallel with; same wave -> parallel.
 
     `metadata` is opaque per-strategy data, copied verbatim into the
-    materialized Hopewell node's `component_data["canon"]["strategy_meta"]`.
+    materialized TaskFlow node's `component_data["canon"]["strategy_meta"]`.
     """
 
     index: int                          # 1-based, unique within the result

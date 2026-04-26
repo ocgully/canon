@@ -9,8 +9,8 @@ Five strategies ship in 0.5.0:
   - tasks          (default fallback) -- linear ordered task list with deps.
                    Best for solo / small change. This is the original 1B
                    behavior.
-  - flow           -- Hopewell-shaped flow network: parallel waves +
-                   `blocks` edges. Falls back to plain JSON when Hopewell
+  - flow           -- TaskFlow-shaped flow network: parallel waves +
+                   `blocks` edges. Falls back to plain JSON when TaskFlow
                    isn't initialized.
   - vertical-slice -- break by demo-able user-visible increment, not by
                    horizontal layer.
@@ -30,7 +30,7 @@ Strategy resolution chain (first match wins) -- see `resolver.py`:
 Each strategy returns a list of typed work items + edges (the exact
 shape depends on the strategy; see `base.WorkItem`). The dispatch layer
 (`run_strategy`) is responsible for materializing the items into
-Hopewell nodes and surfacing strategy-specific metadata.
+TaskFlow nodes and surfacing strategy-specific metadata.
 
 User-facing terminology: the output is "work items", never "tasks", except
 for the `tasks` strategy itself (where the noun is appropriate).

@@ -89,7 +89,7 @@ async function cmdPlan() {
 
 async function cmdDecompose() {
   const specId = await vscode.window.showInputBox({
-    prompt: 'Spec id to decompose into Hopewell work items',
+    prompt: 'Spec id to decompose into TaskFlow work items',
     placeHolder: 'NNN-slug',
   });
   if (!specId) return;
@@ -97,7 +97,7 @@ async function cmdDecompose() {
     [
       { label: 'auto (resolver chain)', value: '' },
       { label: 'tasks (linear list)', value: 'tasks' },
-      { label: 'flow (Hopewell waves)', value: 'flow' },
+      { label: 'flow (TaskFlow waves)', value: 'flow' },
       { label: 'vertical-slice (demo-able increments)', value: 'vertical-slice' },
       { label: 'spike-build (research first)', value: 'spike-build' },
       { label: 'story-map (epic / activity / story)', value: 'story-map' },

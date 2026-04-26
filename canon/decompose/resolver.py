@@ -6,8 +6,8 @@ Resolution order (first match wins):
   2. Plan front-matter key `strategy:`
   3. Repo config `.canon/config.yaml` -> `decompose.strategy:`
   4. Smart fallback:
-       - if `.hopewell/` AND `.pedia/` exist anywhere up the tree from `cwd`
-         -> `flow`
+       - if `.taskflow/` (or legacy `.hopewell/`) AND `.pedia/` exist anywhere
+         up the tree from `cwd` -> `flow`
        - else -> `tasks`
 
 Public surface:

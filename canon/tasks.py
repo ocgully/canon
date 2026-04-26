@@ -33,7 +33,7 @@ from canon.decompose.dispatch import (  # noqa: F401
 
 
 def derive_tasks(project, plan: ParsedPlan, *, dry_run: bool = False) -> TasksResult:
-    """Run the `tasks` strategy + materialize into a Hopewell project.
+    """Run the `tasks` strategy + materialize into a TaskFlow project.
 
     Pre-0.5.0 callers use this signature. Internally we now route via
     the strategy registry so behavior matches `canon decompose --strategy tasks`.

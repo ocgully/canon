@@ -22,4 +22,4 @@ What this does:
 
 This complements `canon trace` (single-id walk) with a holistic view. Useful before milestone planning or after merging multiple feature branches that touched the spec layer.
 
-Like every Canon command, the graph is sourced from real Pedia blocks + Hopewell nodes — there's no separate state file to drift.
+Like every Canon command, the graph is sourced from real Pedia blocks + TaskFlow nodes — there's no separate state file to drift.

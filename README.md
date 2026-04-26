@@ -6,10 +6,10 @@ Canon is the fifth sibling in the agent-infrastructure family:
 
 | Tool | Owns |
 |---|---|
-| [codeatlas](https://github.com/ocgully/mercator) (formerly mercator) | code structure (layered codemap) |
-| [taskflow](https://github.com/ocgully/Hopewell) (formerly hopewell) | work ledger (typed node graph) |
+| [codeatlas](https://github.com/ocgully/codeatlas) | code structure (layered codemap) |
+| [taskflow](https://github.com/ocgully/taskflow) | work ledger (typed node graph) |
 | [pedia](https://github.com/ocgully/pedia) | knowledge / specs / context store |
-| [diffsextant](https://github.com/ocgully/sextant) (formerly sextant) | review / navigation surface |
+| [diffsextant](https://github.com/ocgully/diffsextant) | review / navigation surface |
 | **canon** | **authoring discipline -- spec, plan, task, implement, cite-everything** |
 
 ## Why bury SpecKit?
@@ -24,7 +24,7 @@ SpecKit shipped good ideas (`/specify` -> `/plan` -> `/tasks` -> `/implement`) b
 - LLM-chat authoring is nondeterministic
 - Universal context is not a concept
 
-Canon replaces SpecKit's slash-command surface with a **disciplined, citation-anchored, clarity-loop-interviewed** workflow that sits on top of **Pedia** (knowledge) + **Hopewell** (work). Every artifact Canon writes is a first-class Pedia block with structural citations.
+Canon replaces SpecKit's slash-command surface with a **disciplined, citation-anchored, clarity-loop-interviewed** workflow that sits on top of **Pedia** (knowledge) + **TaskFlow** (work). Every artifact Canon writes is a first-class Pedia block with structural citations.
 
 ## What phase 1A ships
 
@@ -40,13 +40,13 @@ Canon replaces SpecKit's slash-command surface with a **disciplined, citation-an
 
 - `canon decompose <spec-id> [--strategy <name>]` -- breaks a plan into
   work items via a selectable strategy (see the strategies table below).
-  Generates Hopewell nodes from the plan's `## Decomposition` block;
+  Generates TaskFlow nodes from the plan's `## Decomposition` block;
   auto-populates each item's `spec-input` citations, sizing metadata,
   executor suggestion, and a `canon` marker for idempotent re-runs.
   Renamed from `canon tasks` in 0.5.0; the old name still works as a
   deprecated alias.
 - `canon implement <task-id>` -- assembles a context bundle (cited spec
-  slices + universal-context blocks + Mercator dump if present) and
+  slices + universal-context blocks + CodeAtlas dump if present) and
   pushes the work item via `flow.push`. Targets `@orchestrator` when
   the flow network declares one; otherwise falls back to a direct
   dispatch to the item's suggested executor.
@@ -60,7 +60,7 @@ Canon replaces SpecKit's slash-command surface with a **disciplined, citation-an
 | Strategy         | When to use                                                                        |
 | ---------------- | ---------------------------------------------------------------------------------- |
 | `tasks`          | Default for solo / small change. Linear ordered list with deps. (Original 1B.)     |
-| `flow`           | Hopewell-shaped network: parallel waves + `blocks` edges. Best for hand-offs.      |
+| `flow`           | TaskFlow-shaped network: parallel waves + `blocks` edges. Best for hand-offs.      |
 | `vertical-slice` | Each item is a demo-able user-visible increment. No horizontal layer breaks.       |
 | `spike-build`    | High-uncertainty: spike research item first, build items follow + are spike-blocked. |
 | `story-map`      | Epic -> activity -> story hierarchy along the user journey.                        |
@@ -89,7 +89,7 @@ preserves the current strategy and only patches text.
   `.amended-history` file so forensic review never loses the original
   wording. Pedia's `refs` table gets an explicit `supersedes` edge so
   `canon trace` + `canon graph` render the supersession. When a spec
-  or plan is amended and Hopewell is present, Canon runs `hopewell
+  or plan is amended and TaskFlow is present, Canon runs `taskflow
   spec-ref drift --all` and surfaces the output -- per HW-0034.
 
   ```bash
@@ -104,7 +104,7 @@ preserves the current strategy and only patches text.
   -- walks the citation graph. `--up` follows what `<id>` cites
   (transitively); `--down` follows what cites `<id>`. Resolves the
   identifier as a Pedia block-id, a spec slug, a north-star slug, or
-  a Hopewell task-id. Pedia walks via `pedia.trace.walk`; Hopewell
+  a TaskFlow task-id. Pedia walks via `pedia.trace.walk`; TaskFlow
   task walks compose a node-edge BFS with the cited plan-block walk.
   Leaves (no further edges in the requested direction) get a `[leaf]`
   marker so orphan / uncited entities are obvious.
@@ -119,7 +119,7 @@ preserves the current strategy and only patches text.
   Mermaid diagram of the project's citation graph. Node colors track
   doc-type (north-star, constitution, spec, plan, decision, task);
   edge styles distinguish `cites` (solid arrow), `supersedes` (dotted
-  arrow), `requires` / `blocks` (Hopewell overlay). `--for <id>`
+  arrow), `requires` / `blocks` (TaskFlow overlay). `--for <id>`
   scopes to the depth-N neighborhood of that block. Renders natively
   in GitHub, VS Code, and Obsidian.
 
@@ -131,7 +131,7 @@ preserves the current strategy and only patches text.
 ## Install
 
 ```bash
-pip install pedia hopewell canon
+pip install pedia taskflow canon
 ```
 
 ## Quick start
@@ -153,10 +153,10 @@ canon specify cache-layer --from-north-star agent-first-tooling
 # author its plan
 canon plan 001-cache-layer
 
-# break the plan into Hopewell work items (pick a strategy or auto-detect)
+# break the plan into TaskFlow work items (pick a strategy or auto-detect)
 canon decompose 001-cache-layer                  # auto-detect strategy
 canon decompose 001-cache-layer --strategy flow  # parallel-wave flow network
-hopewell list                    # the new work items show up here
+taskflow list                    # the new work items show up here
 
 # verify the citation chain
 canon check                      # exit 0 if clean
@@ -164,7 +164,7 @@ canon check --strict             # exit 2 on warnings too
 
 # dispatch a task (routes via @orchestrator if network has one)
 canon implement HW-0001
-hopewell flow where HW-0001      # see where it landed
+taskflow flow where HW-0001      # see where it landed
 
 # refresh + verify with Pedia
 pedia refresh
@@ -208,14 +208,14 @@ If you pass `--agent claude`:
 4. The agent session refines the answer and returns it on stdout
 5. Canon substitutes verbatim
 
-If the binary isn't on PATH, Canon tells you where the context file was written and continues with the rules-only answer. **Canon never embeds a chat client.** (Same pattern as Sextant §6.5.)
+If the binary isn't on PATH, Canon tells you where the context file was written and continues with the rules-only answer. **Canon never embeds a chat client.** (Same pattern as DiffSextant §6.5.)
 
 ## Storage
 
 Canon stores nothing of its own beyond `.canon/config.yaml` and
 dispatch bundles under `.canon/dispatches/<HW-id>.md` (one per
 `canon implement` invocation). Every authored artifact is a Pedia
-block; every task is a Hopewell node with `component_data["spec-input"]`
+block; every task is a TaskFlow node with `component_data["spec-input"]`
 populated by `canon decompose`.
 
 ## Plugin installation (phase 1D)

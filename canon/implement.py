@@ -4,7 +4,7 @@ Wiring (from canon.cli):
     cmd_implement(args)  -- entry point for `canon implement <task-id>`
 
 Behavior (phase 1B):
-1. Loads the Hopewell project + the named task node.
+1. Loads the TaskFlow project + the named task node.
 2. Detects whether `@orchestrator` exists in the project's flow network
    (executor id `orchestrator`).
 3. Assembles a context bundle:
@@ -12,8 +12,8 @@ Behavior (phase 1B):
    - The cited spec slices (full markdown of `.pedia/specs/<slug>/spec.md`)
    - The cited plan section
    - All `universal_context: true` Pedia blocks (north-stars + constitution)
-   - Mercator data, if a `.mercator/` is present in the repo (best-effort
-     -- we just attach the JSON dump without parsing).
+   - CodeAtlas data, if a `.codeatlas/` (or legacy `.mercator/`) is present
+     in the repo (best-effort -- we just attach the JSON dump without parsing).
 4. Pushes the work item via `flow.push(project, node_id, to_executor)`:
    - If `@orchestrator` is present: push to "orchestrator".
    - Else: push to the task's declared `executor-suggestion.role`.
@@ -35,8 +35,8 @@ from canon import config as config_mod
 from canon import pedia_bridge as pb
 
 
-def _load_hopewell():
-    """Try the new taskflow package; fall back to legacy hopewell."""
+def _load_taskflow():
+    """Load the taskflow package; fall back to the legacy hopewell name."""
     try:
         try:
             from taskflow import project as hw_project  # type: ignore
@@ -49,7 +49,7 @@ def _load_hopewell():
         return hw_project, hw_flow, hw_network
     except Exception as e:
         raise RuntimeError(
-            f"taskflow / hopewell is not importable ({e}); install with "
+            f"taskflow is not importable ({e}); install with "
             "`pip install taskflow` to use `canon implement`"
         )
 
@@ -60,7 +60,7 @@ def _load_hopewell():
 
 
 ORCHESTRATOR_EXECUTOR_ID = "@orchestrator"
-# Hopewell's default template wires `@orchestrator`; older projects may
+# TaskFlow's default template wires `@orchestrator`; older projects may
 # spell it without the leading `@` so we accept either as a match.
 ORCHESTRATOR_ALIASES = ("@orchestrator", "orchestrator")
 
@@ -68,7 +68,7 @@ ORCHESTRATOR_ALIASES = ("@orchestrator", "orchestrator")
 def has_orchestrator(project) -> bool:
     """True if the project's flow network declares an orchestrator executor."""
     try:
-        _, _, hw_network = _load_hopewell()
+        _, _, hw_network = _load_taskflow()
         net = hw_network.load_network(project.root)
         return any(a in net.executors for a in ORCHESTRATOR_ALIASES)
     except Exception:
@@ -77,7 +77,7 @@ def has_orchestrator(project) -> bool:
 
 def _orchestrator_id(project) -> Optional[str]:
     try:
-        _, _, hw_network = _load_hopewell()
+        _, _, hw_network = _load_taskflow()
         net = hw_network.load_network(project.root)
     except Exception:
         return None
@@ -124,11 +124,13 @@ def _universal_blocks(root: Path) -> List[Tuple[str, str]]:
     return out
 
 
-def _mercator_dump(root: Path) -> Optional[str]:
-    """If .mercator/ exists, attach a small index summary."""
-    m = root / ".mercator"
+def _codeatlas_dump(root: Path) -> Optional[str]:
+    """If .codeatlas/ (or legacy .mercator/) exists, attach a small index summary."""
+    m = root / ".codeatlas"
     if not m.is_dir():
-        return None
+        m = root / ".mercator"  # legacy
+        if not m.is_dir():
+            return None
     out_lines = []
     for fp in sorted(m.rglob("*.json")):
         try:
@@ -182,10 +184,10 @@ def assemble_bundle(project, node, *, root: Path, via_orchestrator: bool,
     for (lbl, body) in _universal_blocks(root):
         bundle.sections.append((f"Universal context: {lbl}", body))
 
-    # Mercator (optional).
-    merc = _mercator_dump(root)
+    # CodeAtlas (optional).
+    merc = _codeatlas_dump(root)
     if merc:
-        bundle.sections.append(("Mercator data", merc))
+        bundle.sections.append(("CodeAtlas data", merc))
 
     # Component-data summary (for the executor's reference).
     cd_pretty = json.dumps(node.component_data or {}, indent=2, default=str)
@@ -226,7 +228,7 @@ def _direct_target(project, node) -> Optional[str]:
       3. Else None (caller errors out).
     """
     try:
-        _, _, hw_network = _load_hopewell()
+        _, _, hw_network = _load_taskflow()
         net = hw_network.load_network(project.root)
     except Exception:
         return None
@@ -255,11 +257,11 @@ def cmd_implement(args) -> int:
         sys.stderr.write(msg + "\n")
         return 2
 
-    hw_project, hw_flow, _ = _load_hopewell()
+    hw_project, hw_flow, _ = _load_taskflow()
     try:
         project = hw_project.Project.load(start=root)
     except Exception as e:
-        sys.stderr.write(f"hopewell project not initialized: {e}\n")
+        sys.stderr.write(f"taskflow project not initialized: {e}\n")
         return 2
 
     if not project.has_node(args.task_id):
@@ -275,7 +277,7 @@ def cmd_implement(args) -> int:
         if not target:
             sys.stderr.write(
                 "no orchestrator and no executors registered in the flow network; "
-                "run `hopewell network defaults bootstrap` and retry.\n"
+                "run `taskflow network defaults bootstrap` and retry.\n"
             )
             return 2
 

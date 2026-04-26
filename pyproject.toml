@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "canon"
 version = "0.5.0"
-description = "Canon -- SDD discipline tool. Clarity-loop interviewed, citation-anchored spec + plan + decompose + implement + check over Pedia + Hopewell. Buries SpecKit."
+description = "Canon -- SDD discipline tool. Clarity-loop interviewed, citation-anchored spec + plan + decompose + implement + check over Pedia + TaskFlow. Buries SpecKit."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Christopher Gulliver", email = "ocgully@users.noreply.github.com" }]
-keywords = ["canon", "sdd", "spec-driven-development", "speckit", "clarity-loop", "llm", "agents", "pedia", "hopewell"]
+keywords = ["canon", "sdd", "spec-driven-development", "speckit", "clarity-loop", "llm", "agents", "pedia", "taskflow"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
@@ -23,11 +23,11 @@ classifiers = [
   "Topic :: Utilities",
 ]
 
-# Phase 1B: Pedia + Hopewell are both runtime deps. Pedia stores
-# spec/plan blocks; Hopewell stores tasks + flow dispatch.
+# Phase 1B: Pedia + TaskFlow are both runtime deps. Pedia stores
+# spec/plan blocks; TaskFlow stores tasks + flow dispatch.
 dependencies = [
   "pedia>=0.3",
-  "hopewell>=0.16",
+  "taskflow>=0.16",
 ]
 
 [project.optional-dependencies]

@@ -5,8 +5,8 @@ Each strategy module exposes one function:
     run(plan: ParsedPlan, **opts) -> StrategyResult
 
 The dispatch layer (`canon.decompose.dispatch`) is responsible for
-materializing the result into Hopewell nodes / JSON / etc. Strategies
-themselves do NOT touch Hopewell -- they're pure plan -> structure
+materializing the result into TaskFlow nodes / JSON / etc. Strategies
+themselves do NOT touch TaskFlow -- they're pure plan -> structure
 transformations.
 """
 from __future__ import annotations

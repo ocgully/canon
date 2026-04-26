@@ -29,15 +29,15 @@ Mechanics
    Pedia refs table (Pedia auto-indexes wiki-link `cites` edges but
    not typed front-matter relations).
 7. If task drift may have been introduced (a spec or plan was amended
-   and Hopewell is importable + has spec-input refs), run
-   `hopewell spec-ref drift --all` and surface its output -- per HW-0034.
-   This is best-effort; a missing Hopewell is non-fatal.
+   and TaskFlow is importable + has spec-input refs), run
+   `taskflow spec-ref drift --all` and surface its output -- per HW-0034.
+   This is best-effort; a missing TaskFlow is non-fatal.
 
 Tasks
 -----
-For doc-type `task`, this module wraps Hopewell's amend semantics: the
+For doc-type `task`, this module wraps TaskFlow's amend semantics: the
 canonical "amend" of a task is updating its node + recording an event
-note. We delegate to Hopewell when present and degrade gracefully
+note. We delegate to TaskFlow when present and degrade gracefully
 otherwise (just stamps a note in the Pedia task block, if the project
 mirrors tasks into Pedia).
 
@@ -523,16 +523,17 @@ def write_supersedes_edge(root: Path, src_block_id: str,
 
 
 # ---------------------------------------------------------------------------
-# Hopewell drift surfacing (best-effort)
+# TaskFlow drift surfacing (best-effort)
 # ---------------------------------------------------------------------------
 
 
 def maybe_surface_drift(root: Path, doc_type: str, slug: str) -> Optional[str]:
     """If the amended doc-type may have downstream tasks with spec-input
-    refs, attempt `hopewell spec-ref drift --all` and return its output.
+    refs, attempt `taskflow spec-ref drift --all` and return its output.
 
-    Returns None if Hopewell is absent or the call fails -- callers
-    treat that as "no drift surfaced".
+    Returns None if TaskFlow is absent or the call fails -- callers
+    treat that as "no drift surfaced". The legacy `hopewell` CLI is
+    tried as a fallback.
     """
     if doc_type not in {"spec", "plan"}:
         return None
@@ -606,7 +607,8 @@ def amend(
     canonical = _canonicalize_type(doc_type)
     if canonical == "task":
         # Phase 1B owns task derivation; we hand off when present.
-        # Post-rebrand the package is `taskflow`; pre-rebrand it was `hopewell`.
+        # The canonical package name is `taskflow`; the legacy `hopewell`
+        # name is still accepted as a fallback.
         try:
             try:
                 import taskflow  # noqa: F401
@@ -614,11 +616,11 @@ def amend(
                 import hopewell  # noqa: F401
         except Exception:
             raise RuntimeError(
-                "canon amend task requires `taskflow` (formerly `hopewell`; "
-                "phase 1B). Install canon[taskflow] / canon[hopewell] or run "
-                "`canon amend spec|plan|ns|constitution` instead."
+                "canon amend task requires `taskflow` (phase 1B). Install "
+                "canon[taskflow] or run `canon amend spec|plan|ns|constitution` "
+                "instead."
             )
-        # Hopewell exists; we still don't own task amend authoring in 1C.
+        # TaskFlow exists; we still don't own task amend authoring in 1C.
         raise NotImplementedError(
             "canon amend task is provided by phase 1B (canon/tasks.py). "
             "1C only wires the CLI subcommand -- the implementation lives in 1B."
@@ -756,7 +758,7 @@ def amend_regenerate(
             f"no plan found for identifier {identifier!r} under {root / '.pedia'}"
         )
 
-    # Late imports keep amend.py loadable without taskflow/hopewell installed.
+    # Late imports keep amend.py loadable without taskflow installed.
     from canon.decompose.base import parse_plan
     from canon.decompose.dispatch import run_strategy
 

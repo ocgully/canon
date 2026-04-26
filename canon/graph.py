@@ -12,13 +12,13 @@ Node colors track doc-type:
     spec          -> classDef spec
     plan          -> classDef plan
     decision      -> classDef decision
-    task          -> classDef task   (Hopewell, when present)
+    task          -> classDef task   (TaskFlow, when present)
 
 Edge labels track ref `kind`: cites | supersedes | requires | blocks.
 The Pedia `refs` table only carries cites + supersedes today; the
-`requires` / `blocks` labels appear only when Hopewell-task overlay
-is active. Phase 1C ships the Pedia overlay; the Hopewell overlay is
-best-effort (no-ops if Hopewell isn't installed).
+`requires` / `blocks` labels appear only when TaskFlow-task overlay
+is active. Phase 1C ships the Pedia overlay; the TaskFlow overlay is
+best-effort (no-ops if TaskFlow isn't installed).
 """
 from __future__ import annotations
 
@@ -127,7 +127,7 @@ def build_full(root: Path) -> CitationGraph:
             ))
     finally:
         conn.close()
-    _maybe_overlay_hopewell(root, g)
+    _maybe_overlay_taskflow(root, g)
     return g
 
 
@@ -186,17 +186,26 @@ def build_neighborhood(root: Path, focus_id: str, depth: int) -> CitationGraph:
     return g
 
 
-def _maybe_overlay_hopewell(root: Path, g: CitationGraph) -> None:
-    """Add Hopewell task nodes + edges to the graph, if Hopewell is present."""
-    try:
-        proc = subprocess.run(
-            ["hopewell", "query", "graph"],
-            cwd=str(root), capture_output=True, text=True,
-            check=False, timeout=30,
-        )
-    except Exception:
-        return
-    if proc.returncode != 0 or not proc.stdout.strip():
+def _maybe_overlay_taskflow(root: Path, g: CitationGraph) -> None:
+    """Add TaskFlow task nodes + edges to the graph, if TaskFlow is present.
+
+    Falls back to the legacy `hopewell` CLI if `taskflow` isn't on PATH.
+    """
+    proc = None
+    for cli_name in ("taskflow", "hopewell"):
+        try:
+            proc = subprocess.run(
+                [cli_name, "query", "graph"],
+                cwd=str(root), capture_output=True, text=True,
+                check=False, timeout=30,
+            )
+            break
+        except FileNotFoundError:
+            proc = None
+            continue
+        except Exception:
+            return
+    if proc is None or proc.returncode != 0 or not proc.stdout.strip():
         return
     try:
         data = json.loads(proc.stdout)

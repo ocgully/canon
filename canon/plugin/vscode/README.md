@@ -29,8 +29,8 @@ and a Marketplace publication.
 
   ```bash
   pip install canon
-  # or, for the Hopewell-aware tasks command:
-  pip install 'canon[hopewell]'
+  # or, for the TaskFlow-aware tasks command:
+  pip install 'canon[taskflow]'
   ```
 
 - The `canon` executable on `PATH`. If it lives elsewhere, set
